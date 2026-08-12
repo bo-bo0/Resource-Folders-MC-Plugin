@@ -2,12 +2,20 @@ package net.resourcefolders.ui;
 
 import net.mcreator.ui.variants.modmaker.ModMaker;
 import net.resourcefolders.folders.ResourceFolderManager;
+import net.resourcefolders.resources.ResourceKey;
 import net.resourcefolders.resources.ResourceSection;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
+
+import net.mcreator.ui.workspace.IReloadableFilterable;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class ResourceFoldersInstaller
 {
@@ -116,6 +124,9 @@ public final class ResourceFoldersInstaller
             return;
         }
 
+        var resourceLists =
+                findResourceLists(resourcePanel);
+
         var originalNorth =
                 layout.getLayoutComponent(
                         BorderLayout.NORTH
@@ -150,6 +161,7 @@ public final class ResourceFoldersInstaller
                     new JPanel(new BorderLayout());
 
             originalToolbarWrapper.setOpaque(false);
+
             originalToolbarWrapper.add(
                     originalNorth,
                     BorderLayout.CENTER
@@ -162,6 +174,7 @@ public final class ResourceFoldersInstaller
                 new JPanel(new BorderLayout());
 
         folderPanelWrapper.setOpaque(false);
+
         folderPanelWrapper.add(
                 folderPanel,
                 BorderLayout.CENTER
@@ -173,6 +186,41 @@ public final class ResourceFoldersInstaller
                 header,
                 BorderLayout.NORTH
         );
+
+        var refreshers =
+                new ArrayList<Runnable>();
+
+        if (section == ResourceSection.TEXTURES)
+        {
+            installTextureFilters(
+                    mcreator,
+                    resourcePanel,
+                    resourceLists,
+                    folderPanel,
+                    folderManager,
+                    section,
+                    refreshers
+            );
+        }
+        else
+        {
+            installStandardFilters(
+                    mcreator,
+                    resourceLists,
+                    folderPanel,
+                    folderManager,
+                    section,
+                    refreshers
+            );
+        }
+
+        folderPanel.addFolderChangedListener(_ ->
+        {
+            for (var refresher : refreshers)
+            {
+                refresher.run();
+            }
+        });
 
         resourcePanel.revalidate();
         resourcePanel.repaint();
@@ -196,5 +244,151 @@ public final class ResourceFoldersInstaller
         }
 
         return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void installStandardFilters(
+            ModMaker mcreator,
+            List<JList<?>> resourceLists,
+            ResourceFolderPanel folderPanel,
+            ResourceFolderManager folderManager,
+            ResourceSection section,
+            List<Runnable> refreshers)
+    {
+        for (var resourceList : resourceLists)
+        {
+            var list =
+                    (JList<Object>) resourceList;
+
+            var originalModel =
+                    (ListModel<Object>) list.getModel();
+
+            var folderModel =
+                    new FolderFilteredListModel<>(
+                            originalModel,
+                            resource ->
+                                    isInCurrentFolder(
+                                            resource,
+                                            mcreator,
+                                            folderPanel,
+                                            folderManager,
+                                            section
+                                    )
+                    );
+
+            list.setModel(folderModel);
+
+            refreshers.add(
+                    folderModel::refresh
+            );
+
+            ResourceMoveMenuInstaller.install(
+                    list,
+                    mcreator.getWorkspace(),
+                    folderManager,
+                    section,
+                    folderModel::refresh
+            );
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void installTextureFilters(
+            ModMaker mcreator,
+            JPanel resourcePanel,
+            List<JList<?>> resourceLists,
+            ResourceFolderPanel folderPanel,
+            ResourceFolderManager folderManager,
+            ResourceSection section,
+            List<Runnable> refreshers)
+    {
+        for (var resourceList : resourceLists)
+        {
+            var list =
+                    (JList<File>) resourceList;
+
+            var folderModel =
+                    new ResourceFolderFilterModel<File>(
+                            mcreator.getWorkspacePanel(),
+                            File::getName,
+                            resource ->
+                                    isInCurrentFolder(
+                                            resource,
+                                            mcreator,
+                                            folderPanel,
+                                            folderManager,
+                                            section
+                                    )
+                    );
+
+            list.setModel(folderModel);
+
+            refreshers.add(
+                    folderModel::refreshFolderFilter
+            );
+
+            ResourceMoveMenuInstaller.install(
+                    list,
+                    mcreator.getWorkspace(),
+                    folderManager,
+                    section,
+                    folderModel::refreshFolderFilter
+            );
+        }
+
+        if (resourcePanel
+                instanceof IReloadableFilterable reloadable)
+        {
+            reloadable.reloadElements();
+        }
+    }
+
+    private static boolean isInCurrentFolder(
+            Object resource,
+            ModMaker mcreator,
+            ResourceFolderPanel folderPanel,
+            ResourceFolderManager folderManager,
+            ResourceSection section)
+    {
+        var resourceKey =
+                ResourceKey.of(
+                        resource,
+                        mcreator.getWorkspace()
+                );
+
+        var resourceFolderId =
+                folderManager.getResourceFolder(
+                        section.getId(),
+                        resourceKey
+                );
+
+        return resourceFolderId.equals(
+                folderPanel.getCurrentFolderId()
+        );
+    }
+
+    private static List<JList<?>> findResourceLists(
+            Container container)
+    {
+        var lists =
+                new ArrayList<JList<?>>();
+
+        for (var component :
+                container.getComponents())
+        {
+            if (component instanceof JList<?> list)
+            {
+                lists.add(list);
+            }
+
+            if (component instanceof Container child)
+            {
+                lists.addAll(
+                        findResourceLists(child)
+                );
+            }
+        }
+
+        return lists;
     }
 }

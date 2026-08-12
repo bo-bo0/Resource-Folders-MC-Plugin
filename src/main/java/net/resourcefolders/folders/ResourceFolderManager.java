@@ -3,10 +3,7 @@ package net.resourcefolders.folders;
 import com.google.gson.Gson;
 import net.mcreator.workspace.Workspace;
 
-import java.util.ArrayDeque;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public final class ResourceFolderManager
 {
@@ -156,6 +153,29 @@ public final class ResourceFolderManager
                         resourceKey,
                         ResourceFolderData.ROOT_ID
                 );
+    }
+
+    public void moveResources(
+            String sectionId,
+            Collection<String> resourceKeys,
+            String folderId)
+    {
+        var resourceFolders =
+                getSection(sectionId).getResourceFolders();
+
+        for (var resourceKey : resourceKeys)
+        {
+            if (ResourceFolderData.ROOT_ID.equals(folderId))
+            {
+                resourceFolders.remove(resourceKey);
+            }
+            else
+            {
+                resourceFolders.put(resourceKey, folderId);
+            }
+        }
+
+        save();
     }
 
     public void moveResource(
