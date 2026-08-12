@@ -13,7 +13,9 @@ public final class ResourceKey
     {
     }
 
-    public static String of(Object resource, Workspace workspace)
+    public static String of(
+            Object resource,
+            Workspace workspace)
     {
         if (resource instanceof File file)
         {
@@ -27,12 +29,26 @@ public final class ResourceKey
 
         if (resource instanceof Model model)
         {
-            return "model:" + getFileKey(model.getFile(), workspace);
+            if (model.getFile() != null)
+            {
+                return "model:" + getFileKey(
+                        model.getFile(),
+                        workspace
+                );
+            }
+
+            return "model:"
+                    + model.getType()
+                    + ":"
+                    + model.getReadableName();
         }
 
         if (resource instanceof Animation animation)
         {
-            return "animation:" + getFileKey(animation.getFile(), workspace);
+            return "animation:" + getFileKey(
+                    animation.getFile(),
+                    workspace
+            );
         }
 
         if (resource instanceof String structure)
@@ -41,21 +57,27 @@ public final class ResourceKey
         }
 
         throw new IllegalArgumentException(
-                "Unsupported resource type: " + resource.getClass().getName()
+                "Unsupported resource type: "
+                        + resource.getClass().getName()
         );
     }
 
-    private static String getFileKey(File file, Workspace workspace)
+    private static String getFileKey(
+            File file,
+            Workspace workspace)
     {
         try
         {
-            return workspace.getFolderManager()
+            return workspace
+                    .getFolderManager()
                     .getPathInWorkspace(file)
                     .replace('\\', '/');
         }
-        catch (Exception ignored)
+        catch (RuntimeException ignored)
         {
-            return file.getAbsolutePath().replace('\\', '/');
+            return file
+                    .getAbsolutePath()
+                    .replace('\\', '/');
         }
     }
 }
