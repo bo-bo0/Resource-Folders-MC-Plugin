@@ -142,7 +142,8 @@ public final class ResourceFoldersInstaller
         }
 
         if (!(resourcePanel
-                instanceof IReloadableFilterable reloadable))
+                instanceof IReloadableFilterable
+                reloadable))
         {
             LOG.warn(
                     "Resource Folders: {} is not reloadable",
@@ -192,7 +193,6 @@ public final class ResourceFoldersInstaller
                         folderManager,
                         section
                 );
-
 
         folderPanel.installAssetDropTarget(
                 reloadSection
@@ -305,7 +305,6 @@ public final class ResourceFoldersInstaller
         folderPanel.addFolderChangedListener(_ ->
         {
             reloadSection.run();
-
             importTracker.resetBaseline();
         });
 

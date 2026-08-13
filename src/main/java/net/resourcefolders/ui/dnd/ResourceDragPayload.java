@@ -12,6 +12,7 @@ public final class ResourceDragPayload
             List<String> resourceKeys)
     {
         this.sectionId = sectionId;
+
         this.resourceKeys =
                 List.copyOf(resourceKeys);
     }
