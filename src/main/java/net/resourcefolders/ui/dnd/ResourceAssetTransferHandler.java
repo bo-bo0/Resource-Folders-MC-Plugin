@@ -64,14 +64,11 @@ public final class ResourceAssetTransferHandler
             return null;
         }
 
-        var payload =
+        return new ResourcePayloadTransferable(
                 new ResourceDragPayload(
                         section.getId(),
                         resourceKeys
-                );
-
-        return new ResourcePayloadTransferable(
-                payload
+                )
         );
     }
 
@@ -95,8 +92,7 @@ public final class ResourceAssetTransferHandler
         }
 
         @Override
-        public DataFlavor[]
-        getTransferDataFlavors()
+        public DataFlavor[] getTransferDataFlavors()
         {
             return new DataFlavor[]
                     {
@@ -108,8 +104,9 @@ public final class ResourceAssetTransferHandler
         public boolean isDataFlavorSupported(
                 DataFlavor flavor)
         {
-            return RESOURCE_PAYLOAD_FLAVOR
-                    .equals(flavor);
+            return RESOURCE_PAYLOAD_FLAVOR.equals(
+                    flavor
+            );
         }
 
         @Override

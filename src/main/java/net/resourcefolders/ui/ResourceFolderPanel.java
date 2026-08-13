@@ -33,8 +33,7 @@ public final class ResourceFolderPanel
     private final JList<ResourceFolder> folderList =
             new JList<>(folderListModel);
 
-    private final JLabel pathLabel =
-            new JLabel();
+    private final ResourceFolderBreadcrumb breadcrumb;
 
     private final JButton upFolderButton =
             new JButton(
@@ -68,6 +67,13 @@ public final class ResourceFolderPanel
         this.mcreator = mcreator;
         this.folderManager = folderManager;
         this.section = section;
+
+        breadcrumb =
+                new ResourceFolderBreadcrumb(
+                        folderManager,
+                        section,
+                        this::switchFolder
+                );
 
         setOpaque(false);
 
@@ -108,6 +114,10 @@ public final class ResourceFolderPanel
                         section,
                         reloadSection
                 )
+        );
+
+        breadcrumb.installAssetDropTarget(
+                reloadSection
         );
     }
 
@@ -181,26 +191,29 @@ public final class ResourceFolderPanel
                 deleteSelectedFolder()
         );
 
-        pathLabel.setBorder(
-                BorderFactory.createEmptyBorder(
-                        0,
-                        8,
-                        0,
-                        8
-                )
+        toolbar.add(
+                addFolderButton
         );
 
-        toolbar.add(addFolderButton);
-        toolbar.add(upFolderButton);
+        toolbar.add(
+                upFolderButton
+        );
 
         toolbar.addSeparator();
 
-        toolbar.add(renameFolderButton);
-        toolbar.add(deleteFolderButton);
+        toolbar.add(
+                renameFolderButton
+        );
+
+        toolbar.add(
+                deleteFolderButton
+        );
 
         toolbar.addSeparator();
 
-        toolbar.add(pathLabel);
+        toolbar.add(
+                breadcrumb
+        );
 
         add(
                 toolbar,
@@ -245,7 +258,8 @@ public final class ResourceFolderPanel
                     public void mouseClicked(
                             MouseEvent event)
                     {
-                        if (event.getClickCount() == 2)
+                        if (event.getClickCount()
+                                == 2)
                         {
                             openSelectedFolder();
                         }
@@ -290,11 +304,13 @@ public final class ResourceFolderPanel
                 .setOpaque(false);
 
         scrollPane.setHorizontalScrollBarPolicy(
-                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
+                ScrollPaneConstants
+                        .HORIZONTAL_SCROLLBAR_AS_NEEDED
         );
 
         scrollPane.setVerticalScrollBarPolicy(
-                ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
+                ScrollPaneConstants
+                        .VERTICAL_SCROLLBAR_NEVER
         );
 
         scrollPane.setBorder(
@@ -403,7 +419,8 @@ public final class ResourceFolderPanel
             return;
         }
 
-        if (name.equals(folder.getName()))
+        if (name.equals(
+                folder.getName()))
         {
             return;
         }
@@ -457,10 +474,11 @@ public final class ResourceFolderPanel
                 );
 
         var resourceKeys =
-                folderManager.getResourceKeysInFolderTree(
-                        section.getId(),
-                        folder.getId()
-                );
+                folderManager
+                        .getResourceKeysInFolderTree(
+                                section.getId(),
+                                folder.getId()
+                        );
 
         int nestedFolderCount =
                 Math.max(
@@ -489,16 +507,18 @@ public final class ResourceFolderPanel
                         JOptionPane.WARNING_MESSAGE
                 );
 
-        if (result != JOptionPane.YES_OPTION)
+        if (result
+                != JOptionPane.YES_OPTION)
         {
             return;
         }
 
-        ResourceFolderContentDeleter.deleteResources(
-                mcreator,
-                section,
-                resourceKeys
-        );
+        ResourceFolderContentDeleter
+                .deleteResources(
+                        mcreator,
+                        section,
+                        resourceKeys
+                );
 
         folderManager.deleteFolderTree(
                 section.getId(),
@@ -568,6 +588,23 @@ public final class ResourceFolderPanel
     private void switchFolder(
             String folderId)
     {
+        if (folderId == null)
+        {
+            folderId =
+                    ResourceFolderData.ROOT_ID;
+        }
+
+        if (!ResourceFolderData.ROOT_ID.equals(
+                folderId)
+                && folderManager.getFolder(
+                section.getId(),
+                folderId
+        ) == null)
+        {
+            folderId =
+                    ResourceFolderData.ROOT_ID;
+        }
+
         currentFolderId =
                 folderId;
 
@@ -601,12 +638,8 @@ public final class ResourceFolderPanel
             );
         }
 
-        pathLabel.setText(
-                folderManager.getPath(
-                        section.getId(),
-                        section.getDisplayName(),
-                        currentFolderId
-                )
+        breadcrumb.reloadPath(
+                currentFolderId
         );
 
         upFolderButton.setEnabled(
@@ -667,6 +700,7 @@ public final class ResourceFolderPanel
             JButton button)
     {
         button.setContentAreaFilled(false);
+
         button.setBorderPainted(false);
 
         button.setBorder(

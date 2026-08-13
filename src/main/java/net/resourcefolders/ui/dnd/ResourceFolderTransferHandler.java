@@ -1,6 +1,7 @@
 package net.resourcefolders.ui.dnd;
 
 import net.resourcefolders.folders.ResourceFolder;
+import net.resourcefolders.folders.ResourceFolderData;
 import net.resourcefolders.folders.ResourceFolderManager;
 import net.resourcefolders.resources.ResourceSection;
 
@@ -31,6 +32,115 @@ public final class ResourceFolderTransferHandler
     public boolean canImport(
             TransferSupport support)
     {
+        boolean accepted =
+                canImportInternal(support);
+
+        if (support.getComponent()
+                instanceof ResourceFolderCrumb crumb)
+        {
+            if (accepted)
+            {
+                crumb.pulseDropHighlight();
+            }
+            else
+            {
+                crumb.clearDropHighlight();
+            }
+        }
+
+        if (accepted)
+        {
+            support.setDropAction(MOVE);
+        }
+
+        return accepted;
+    }
+
+    @Override
+    public boolean importData(
+            TransferSupport support)
+    {
+        if (!canImportInternal(support))
+        {
+            clearCrumbHighlight(
+                    support
+            );
+
+            return false;
+        }
+
+        var payload =
+                getPayload(support);
+
+        if (payload == null)
+        {
+            clearCrumbHighlight(
+                    support
+            );
+
+            return false;
+        }
+
+        var targetFolderId =
+                getTargetFolderId(
+                        support
+                );
+
+        if (targetFolderId == null)
+        {
+            clearCrumbHighlight(
+                    support
+            );
+
+            return false;
+        }
+
+        var resourcesToMove =
+                new ArrayList<String>();
+
+        for (var resourceKey :
+                payload.getResourceKeys())
+        {
+            var currentFolderId =
+                    folderManager.getResourceFolder(
+                            section.getId(),
+                            resourceKey
+                    );
+
+            if (!targetFolderId.equals(
+                    currentFolderId))
+            {
+                resourcesToMove.add(
+                        resourceKey
+                );
+            }
+        }
+
+        clearCrumbHighlight(
+                support
+        );
+
+        if (resourcesToMove.isEmpty())
+        {
+            return true;
+        }
+
+        folderManager.moveResources(
+                section.getId(),
+                resourcesToMove,
+                targetFolderId
+        );
+
+        SwingUtilities.invokeLater(
+                reloadSection
+        );
+
+        return true;
+    }
+
+    private boolean canImportInternal(
+            TransferSupport support)
+    {
         if (!support.isDrop())
         {
             return false;
@@ -39,41 +149,6 @@ public final class ResourceFolderTransferHandler
         if (!support.isDataFlavorSupported(
                 ResourceAssetTransferHandler
                         .RESOURCE_PAYLOAD_FLAVOR))
-        {
-            return false;
-        }
-
-        if (!(support.getComponent()
-                instanceof JList<?> list))
-        {
-            return false;
-        }
-
-        if (!(support.getDropLocation()
-                instanceof JList.DropLocation dropLocation))
-        {
-            return false;
-        }
-
-        if (dropLocation.isInsert())
-        {
-            return false;
-        }
-
-        int index =
-                dropLocation.getIndex();
-
-        if (index < 0
-                || index >= list.getModel().getSize())
-        {
-            return false;
-        }
-
-        var target =
-                list.getModel()
-                        .getElementAt(index);
-
-        if (!(target instanceof ResourceFolder))
         {
             return false;
         }
@@ -92,85 +167,77 @@ public final class ResourceFolderTransferHandler
             return false;
         }
 
-        support.setDropAction(MOVE);
-
-        return true;
-    }
-
-    @Override
-    public boolean importData(
-            TransferSupport support)
-    {
-        if (!canImport(support))
-        {
-            return false;
-        }
-
-        var payload =
-                getPayload(support);
-
-        if (payload == null)
-        {
-            return false;
-        }
-
-        var list =
-                (JList<?>) support.getComponent();
-
-        var dropLocation =
-                (JList.DropLocation)
-                        support.getDropLocation();
-
-        int index =
-                dropLocation.getIndex();
-
-        var target =
-                list.getModel()
-                        .getElementAt(index);
-
-        if (!(target
-                instanceof ResourceFolder folder))
-        {
-            return false;
-        }
-
-        var resourcesToMove =
-                new ArrayList<String>();
-
-        for (var resourceKey :
-                payload.getResourceKeys())
-        {
-            var currentFolderId =
-                    folderManager.getResourceFolder(
-                            section.getId(),
-                            resourceKey
-                    );
-
-            if (!folder.getId().equals(
-                    currentFolderId))
-            {
-                resourcesToMove.add(
-                        resourceKey
+        var targetFolderId =
+                getTargetFolderId(
+                        support
                 );
-            }
+
+        if (targetFolderId == null)
+        {
+            return false;
         }
 
-        if (resourcesToMove.isEmpty())
+        if (ResourceFolderData.ROOT_ID.equals(
+                targetFolderId))
         {
             return true;
         }
 
-        folderManager.moveResources(
+        return folderManager.getFolder(
                 section.getId(),
-                resourcesToMove,
-                folder.getId()
-        );
+                targetFolderId
+        ) != null;
+    }
 
-        SwingUtilities.invokeLater(
-                reloadSection
-        );
+    private String getTargetFolderId(
+            TransferSupport support)
+    {
+        var component =
+                support.getComponent();
 
-        return true;
+        if (component
+                instanceof ResourceFolderCrumb crumb)
+        {
+            return crumb.getFolderId();
+        }
+
+        if (component
+                instanceof JList<?> list)
+        {
+            if (!(support.getDropLocation()
+                    instanceof JList.DropLocation
+                    dropLocation))
+            {
+                return null;
+            }
+
+            if (dropLocation.isInsert())
+            {
+                return null;
+            }
+
+            int index =
+                    dropLocation.getIndex();
+
+            if (index < 0
+                    || index
+                    >= list.getModel().getSize())
+            {
+                return null;
+            }
+
+            var target =
+                    list.getModel()
+                            .getElementAt(index);
+
+            if (target
+                    instanceof ResourceFolder folder)
+            {
+                return folder.getId();
+            }
+        }
+
+        return null;
     }
 
     private ResourceDragPayload getPayload(
@@ -199,6 +266,16 @@ public final class ResourceFolderTransferHandler
                 | IOException ignored)
         {
             return null;
+        }
+    }
+
+    private void clearCrumbHighlight(
+            TransferSupport support)
+    {
+        if (support.getComponent()
+                instanceof ResourceFolderCrumb crumb)
+        {
+            crumb.clearDropHighlight();
         }
     }
 }
