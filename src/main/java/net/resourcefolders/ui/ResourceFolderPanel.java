@@ -5,6 +5,7 @@ import net.mcreator.ui.variants.modmaker.ModMaker;
 import net.resourcefolders.folders.ResourceFolder;
 import net.resourcefolders.folders.ResourceFolderData;
 import net.resourcefolders.folders.ResourceFolderManager;
+import net.resourcefolders.resources.ResourceFolderContentDeleter;
 import net.resourcefolders.resources.ResourceSection;
 
 import javax.swing.*;
@@ -17,24 +18,40 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-public final class ResourceFolderPanel extends JPanel
+public final class ResourceFolderPanel
+        extends JPanel
 {
     private final ModMaker mcreator;
     private final ResourceFolderManager folderManager;
     private final ResourceSection section;
 
-    private final DefaultListModel<ResourceFolder> folderListModel =
+    private final DefaultListModel<ResourceFolder>
+            folderListModel =
             new DefaultListModel<>();
 
     private final JList<ResourceFolder> folderList =
             new JList<>(folderListModel);
 
-    private final JLabel pathLabel = new JLabel();
+    private final JLabel pathLabel =
+            new JLabel();
 
     private final JButton upFolderButton =
-            new JButton(UIRES.get("laf.upFolder"));
+            new JButton(
+                    UIRES.get("laf.upFolder")
+            );
 
-    private final List<Consumer<String>> folderChangedListeners =
+    private final JButton renameFolderButton =
+            new JButton(
+                    UIRES.get("laf.renameFolder")
+            );
+
+    private final JButton deleteFolderButton =
+            new JButton(
+                    UIRES.get("16px.delete")
+            );
+
+    private final List<Consumer<String>>
+            folderChangedListeners =
             new ArrayList<>();
 
     private String currentFolderId =
@@ -72,25 +89,48 @@ public final class ResourceFolderPanel extends JPanel
     public void addFolderChangedListener(
             Consumer<String> listener)
     {
-        folderChangedListeners.add(listener);
+        folderChangedListeners.add(
+                listener
+        );
     }
 
     private void initializeToolbar()
     {
-        var toolbar = new JToolBar();
+        var toolbar =
+                new JToolBar();
 
         toolbar.setFloatable(false);
         toolbar.setOpaque(false);
 
         toolbar.setBorder(
-                BorderFactory.createEmptyBorder(3, 5, 3, 5)
+                BorderFactory.createEmptyBorder(
+                        3,
+                        5,
+                        3,
+                        5
+                )
         );
 
         var addFolderButton =
-                new JButton(UIRES.get("laf.newFolder"));
+                new JButton(
+                        UIRES.get("laf.newFolder")
+                );
 
-        configureToolbarButton(addFolderButton);
-        configureToolbarButton(upFolderButton);
+        configureToolbarButton(
+                addFolderButton
+        );
+
+        configureToolbarButton(
+                upFolderButton
+        );
+
+        configureToolbarButton(
+                renameFolderButton
+        );
+
+        configureToolbarButton(
+                deleteFolderButton
+        );
 
         addFolderButton.setToolTipText(
                 "Create resource folder"
@@ -100,35 +140,55 @@ public final class ResourceFolderPanel extends JPanel
                 "Go to parent folder"
         );
 
+        renameFolderButton.setToolTipText(
+                "Rename selected folder"
+        );
+
+        deleteFolderButton.setToolTipText(
+                "Delete selected folder and all its contents"
+        );
+
         addFolderButton.addActionListener(_ ->
                 createFolder()
         );
 
         upFolderButton.addActionListener(_ ->
-        {
-            if (ResourceFolderData.ROOT_ID.equals(currentFolderId))
-            {
-                return;
-            }
+                goToParentFolder()
+        );
 
-            switchFolder(
-                    folderManager.getParentId(
-                            section.getId(),
-                            currentFolderId
-                    )
-            );
-        });
+        renameFolderButton.addActionListener(_ ->
+                renameSelectedFolder()
+        );
+
+        deleteFolderButton.addActionListener(_ ->
+                deleteSelectedFolder()
+        );
 
         pathLabel.setBorder(
-                BorderFactory.createEmptyBorder(0, 8, 0, 8)
+                BorderFactory.createEmptyBorder(
+                        0,
+                        8,
+                        0,
+                        8
+                )
         );
 
         toolbar.add(addFolderButton);
         toolbar.add(upFolderButton);
+
         toolbar.addSeparator();
+
+        toolbar.add(renameFolderButton);
+        toolbar.add(deleteFolderButton);
+
+        toolbar.addSeparator();
+
         toolbar.add(pathLabel);
 
-        add(toolbar, BorderLayout.NORTH);
+        add(
+                toolbar,
+                BorderLayout.NORTH
+        );
     }
 
     private void initializeFolderList()
@@ -140,8 +200,14 @@ public final class ResourceFolderPanel extends JPanel
         );
 
         folderList.setVisibleRowCount(1);
-        folderList.setFixedCellWidth(150);
-        folderList.setFixedCellHeight(44);
+
+        folderList.setFixedCellWidth(
+                150
+        );
+
+        folderList.setFixedCellHeight(
+                44
+        );
 
         folderList.setSelectionMode(
                 ListSelectionModel.SINGLE_SELECTION
@@ -151,47 +217,60 @@ public final class ResourceFolderPanel extends JPanel
                 new FolderRenderer()
         );
 
-        folderList.addMouseListener(new MouseAdapter()
-        {
-            @Override
-            public void mouseClicked(MouseEvent event)
-            {
-                if (event.getClickCount() == 2)
-                {
-                    openSelectedFolder();
-                }
-            }
-        });
+        folderList.addListSelectionListener(_ ->
+                updateFolderActionButtons()
+        );
 
-        folderList.addKeyListener(new KeyAdapter()
-        {
-            @Override
-            public void keyPressed(KeyEvent event)
-            {
-                if (event.getKeyCode() == KeyEvent.VK_ENTER)
+        folderList.addMouseListener(
+                new MouseAdapter()
                 {
-                    openSelectedFolder();
+                    @Override
+                    public void mouseClicked(
+                            MouseEvent event)
+                    {
+                        if (event.getClickCount() == 2)
+                        {
+                            openSelectedFolder();
+                        }
+                    }
                 }
-                else if (
-                        event.getKeyCode() == KeyEvent.VK_BACK_SPACE
-                                && !ResourceFolderData.ROOT_ID.equals(
-                                currentFolderId))
+        );
+
+        folderList.addKeyListener(
+                new KeyAdapter()
                 {
-                    switchFolder(
-                            folderManager.getParentId(
-                                    section.getId(),
-                                    currentFolderId
-                            )
-                    );
+                    @Override
+                    public void keyPressed(
+                            KeyEvent event)
+                    {
+                        switch (event.getKeyCode())
+                        {
+                            case KeyEvent.VK_ENTER ->
+                                    openSelectedFolder();
+
+                            case KeyEvent.VK_BACK_SPACE ->
+                                    goToParentFolder();
+
+                            case KeyEvent.VK_F2 ->
+                                    renameSelectedFolder();
+
+                            case KeyEvent.VK_DELETE ->
+                                    deleteSelectedFolder();
+                        }
+                    }
                 }
-            }
-        });
+        );
 
         var scrollPane =
-                new JScrollPane(folderList);
+                new JScrollPane(
+                        folderList
+                );
 
         scrollPane.setOpaque(false);
-        scrollPane.getViewport().setOpaque(false);
+
+        scrollPane
+                .getViewport()
+                .setOpaque(false);
 
         scrollPane.setHorizontalScrollBarPolicy(
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
@@ -202,24 +281,36 @@ public final class ResourceFolderPanel extends JPanel
         );
 
         scrollPane.setBorder(
-                BorderFactory.createEmptyBorder(0, 5, 4, 5)
+                BorderFactory.createEmptyBorder(
+                        0,
+                        5,
+                        4,
+                        5
+                )
         );
 
         scrollPane.setPreferredSize(
-                new Dimension(0, 56)
+                new Dimension(
+                        0,
+                        56
+                )
         );
 
-        add(scrollPane, BorderLayout.CENTER);
+        add(
+                scrollPane,
+                BorderLayout.CENTER
+        );
     }
 
     private void createFolder()
     {
-        var name = JOptionPane.showInputDialog(
-                mcreator,
-                "Folder name:",
-                "Create Resource Folder",
-                JOptionPane.PLAIN_MESSAGE
-        );
+        var name =
+                JOptionPane.showInputDialog(
+                        mcreator,
+                        "Folder name:",
+                        "Create Resource Folder",
+                        JOptionPane.PLAIN_MESSAGE
+                );
 
         if (name == null)
         {
@@ -228,20 +319,8 @@ public final class ResourceFolderPanel extends JPanel
 
         name = name.trim();
 
-        if (name.isEmpty())
+        if (!validateFolderName(name))
         {
-            return;
-        }
-
-        if (!name.matches("[A-Za-z0-9._ -]+"))
-        {
-            JOptionPane.showMessageDialog(
-                    mcreator,
-                    "Folder names can only contain letters, numbers, spaces, '.', '_' and '-'.",
-                    "Invalid Folder Name",
-                    JOptionPane.ERROR_MESSAGE
-            );
-
             return;
         }
 
@@ -260,36 +339,234 @@ public final class ResourceFolderPanel extends JPanel
             return;
         }
 
-        folderManager.createFolder(
-                section.getId(),
-                name,
-                currentFolderId
-        );
+        var folder =
+                folderManager.createFolder(
+                        section.getId(),
+                        name,
+                        currentFolderId
+                );
 
         refresh();
+
+        selectFolder(
+                folder.getId()
+        );
     }
 
-    private void openSelectedFolder()
+    private void renameSelectedFolder()
     {
-        var folder = folderList.getSelectedValue();
+        var folder =
+                folderList.getSelectedValue();
 
         if (folder == null)
         {
             return;
         }
 
-        switchFolder(folder.getId());
-    }
+        var result =
+                JOptionPane.showInputDialog(
+                        mcreator,
+                        "Folder name:",
+                        "Rename Resource Folder",
+                        JOptionPane.PLAIN_MESSAGE,
+                        null,
+                        null,
+                        folder.getName()
+                );
 
-    private void switchFolder(String folderId)
-    {
-        currentFolderId = folderId;
+        if (!(result instanceof String name))
+        {
+            return;
+        }
+
+        name = name.trim();
+
+        if (!validateFolderName(name))
+        {
+            return;
+        }
+
+        if (name.equals(folder.getName()))
+        {
+            return;
+        }
+
+        if (folderManager.folderExists(
+                section.getId(),
+                name,
+                folder.getParentId(),
+                folder.getId()))
+        {
+            JOptionPane.showMessageDialog(
+                    mcreator,
+                    "A folder with this name already exists here.",
+                    "Folder Already Exists",
+                    JOptionPane.ERROR_MESSAGE
+            );
+
+            return;
+        }
+
+        folderManager.renameFolder(
+                section.getId(),
+                folder.getId(),
+                name
+        );
+
+        var folderId =
+                folder.getId();
 
         refresh();
 
-        for (var listener : folderChangedListeners)
+        selectFolder(
+                folderId
+        );
+    }
+
+    private void deleteSelectedFolder()
+    {
+        var folder =
+                folderList.getSelectedValue();
+
+        if (folder == null)
         {
-            listener.accept(currentFolderId);
+            return;
+        }
+
+        var folderTreeSize =
+                folderManager.getFolderTreeSize(
+                        section.getId(),
+                        folder.getId()
+                );
+
+        var resourceKeys =
+                folderManager.getResourceKeysInFolderTree(
+                        section.getId(),
+                        folder.getId()
+                );
+
+        int nestedFolderCount =
+                Math.max(
+                        0,
+                        folderTreeSize - 1
+                );
+
+        var message =
+                "Delete folder \""
+                        + folder.getName()
+                        + "\"?\n\n"
+                        + "This will permanently delete:\n"
+                        + resourceKeys.size()
+                        + " resource(s)\n"
+                        + nestedFolderCount
+                        + " subfolder(s)\n\n"
+                        + "Resources will also be deleted from the workspace.\n"
+                        + "This action cannot be undone.";
+
+        int result =
+                JOptionPane.showConfirmDialog(
+                        mcreator,
+                        message,
+                        "Delete Resource Folder",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE
+                );
+
+        if (result != JOptionPane.YES_OPTION)
+        {
+            return;
+        }
+
+        ResourceFolderContentDeleter.deleteResources(
+                mcreator,
+                section,
+                resourceKeys
+        );
+
+        folderManager.deleteFolderTree(
+                section.getId(),
+                folder.getId()
+        );
+
+        refresh();
+
+        notifyFolderChanged();
+    }
+
+    private boolean validateFolderName(
+            String name)
+    {
+        if (name.isEmpty())
+        {
+            return false;
+        }
+
+        if (!name.matches(
+                "[A-Za-z0-9._ -]+"))
+        {
+            JOptionPane.showMessageDialog(
+                    mcreator,
+                    "Folder names can only contain letters, numbers, spaces, '.', '_' and '-'.",
+                    "Invalid Folder Name",
+                    JOptionPane.ERROR_MESSAGE
+            );
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private void openSelectedFolder()
+    {
+        var folder =
+                folderList.getSelectedValue();
+
+        if (folder == null)
+        {
+            return;
+        }
+
+        switchFolder(
+                folder.getId()
+        );
+    }
+
+    private void goToParentFolder()
+    {
+        if (ResourceFolderData.ROOT_ID.equals(
+                currentFolderId))
+        {
+            return;
+        }
+
+        switchFolder(
+                folderManager.getParentId(
+                        section.getId(),
+                        currentFolderId
+                )
+        );
+    }
+
+    private void switchFolder(
+            String folderId)
+    {
+        currentFolderId =
+                folderId;
+
+        refresh();
+
+        notifyFolderChanged();
+    }
+
+    private void notifyFolderChanged()
+    {
+        for (var listener :
+                folderChangedListeners)
+        {
+            listener.accept(
+                    currentFolderId
+            );
         }
     }
 
@@ -297,11 +574,14 @@ public final class ResourceFolderPanel extends JPanel
     {
         folderListModel.clear();
 
-        for (var folder : folderManager.getChildren(
-                section.getId(),
-                currentFolderId))
+        for (var folder :
+                folderManager.getChildren(
+                        section.getId(),
+                        currentFolderId))
         {
-            folderListModel.addElement(folder);
+            folderListModel.addElement(
+                    folder
+            );
         }
 
         pathLabel.setText(
@@ -313,11 +593,57 @@ public final class ResourceFolderPanel extends JPanel
         );
 
         upFolderButton.setEnabled(
-                !ResourceFolderData.ROOT_ID.equals(currentFolderId)
+                !ResourceFolderData.ROOT_ID.equals(
+                        currentFolderId
+                )
         );
+
+        updateFolderActionButtons();
 
         revalidate();
         repaint();
+    }
+
+    private void selectFolder(
+            String folderId)
+    {
+        for (int i = 0;
+             i < folderListModel.size();
+             i++)
+        {
+            var folder =
+                    folderListModel.get(i);
+
+            if (folder
+                    .getId()
+                    .equals(folderId))
+            {
+                folderList.setSelectedIndex(
+                        i
+                );
+
+                folderList.ensureIndexIsVisible(
+                        i
+                );
+
+                return;
+            }
+        }
+    }
+
+    private void updateFolderActionButtons()
+    {
+        boolean folderSelected =
+                folderList.getSelectedValue()
+                        != null;
+
+        renameFolderButton.setEnabled(
+                folderSelected
+        );
+
+        deleteFolderButton.setEnabled(
+                folderSelected
+        );
     }
 
     private static void configureToolbarButton(
@@ -327,7 +653,12 @@ public final class ResourceFolderPanel extends JPanel
         button.setBorderPainted(false);
 
         button.setBorder(
-                BorderFactory.createEmptyBorder(0, 3, 0, 3)
+                BorderFactory.createEmptyBorder(
+                        0,
+                        3,
+                        0,
+                        3
+                )
         );
 
         button.setCursor(
@@ -341,10 +672,13 @@ public final class ResourceFolderPanel extends JPanel
             extends DefaultListCellRenderer
     {
         private final Icon folderIcon =
-                UIManager.getIcon("FileView.directoryIcon");
+                UIManager.getIcon(
+                        "FileView.directoryIcon"
+                );
 
         @Override
-        public Component getListCellRendererComponent(
+        public Component
+        getListCellRendererComponent(
                 JList<?> list,
                 Object value,
                 int index,
@@ -359,10 +693,16 @@ public final class ResourceFolderPanel extends JPanel
                     cellHasFocus
             );
 
-            if (value instanceof ResourceFolder folder)
+            if (value
+                    instanceof ResourceFolder folder)
             {
-                setText(folder.getName());
-                setIcon(folderIcon);
+                setText(
+                        folder.getName()
+                );
+
+                setIcon(
+                        folderIcon
+                );
             }
 
             setBorder(

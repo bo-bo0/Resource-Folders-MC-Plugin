@@ -14,15 +14,20 @@ import java.util.function.Supplier;
 
 public final class ResourceImportTracker
 {
-    private static final int CHECK_INTERVAL_MS = 300;
+    private static final int CHECK_INTERVAL_MS =
+            300;
 
     private final Workspace workspace;
     private final ResourceFolderManager folderManager;
     private final ResourceSection section;
     private final ResourceFolderPanel folderPanel;
 
-    private final Supplier<? extends Collection<?>> resourcesSupplier;
-    private final BooleanSupplier sectionActiveSupplier;
+    private final Supplier<? extends Collection<?>>
+            resourcesSupplier;
+
+    private final BooleanSupplier
+            sectionActiveSupplier;
+
     private final Runnable refresh;
 
     private final Set<String> knownResourceKeys =
@@ -55,10 +60,12 @@ public final class ResourceImportTracker
         sectionWasActive =
                 sectionActiveSupplier.getAsBoolean();
 
-        timer = new Timer(
-                CHECK_INTERVAL_MS,
-                _ -> checkForNewResources()
-        );
+        timer =
+                new Timer(
+                        CHECK_INTERVAL_MS,
+                        _ ->
+                                checkForNewResources()
+                );
 
         timer.setCoalesce(true);
         timer.start();
@@ -79,9 +86,11 @@ public final class ResourceImportTracker
         }
 
         boolean sectionActive =
-                sectionActiveSupplier.getAsBoolean();
+                sectionActiveSupplier
+                        .getAsBoolean();
 
-        if (sectionActive && !sectionWasActive)
+        if (sectionActive
+                && !sectionWasActive)
         {
             replaceKnownResources();
 
@@ -110,13 +119,16 @@ public final class ResourceImportTracker
                 getCurrentResourceKeys();
 
         var newResourceKeys =
-                new HashSet<>(currentResourceKeys);
+                new HashSet<>(
+                        currentResourceKeys
+                );
 
         newResourceKeys.removeAll(
                 knownResourceKeys
         );
 
         knownResourceKeys.clear();
+
         knownResourceKeys.addAll(
                 currentResourceKeys
         );
@@ -149,7 +161,8 @@ public final class ResourceImportTracker
         var resourceKeys =
                 new HashSet<String>();
 
-        for (var resource : resourcesSupplier.get())
+        for (var resource :
+                resourcesSupplier.get())
         {
             try
             {

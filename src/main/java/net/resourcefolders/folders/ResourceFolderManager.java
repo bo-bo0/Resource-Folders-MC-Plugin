@@ -3,12 +3,19 @@ package net.resourcefolders.folders;
 import com.google.gson.Gson;
 import net.mcreator.workspace.Workspace;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 public final class ResourceFolderManager
 {
-    private static final String METADATA_KEY = "resource_folders";
-    private static final Gson GSON = new Gson();
+    private static final String METADATA_KEY =
+            "resource_folders";
+
+    private static final Gson GSON =
+            new Gson();
 
     private final Workspace workspace;
 
@@ -33,9 +40,17 @@ public final class ResourceFolderManager
                 .getFolders()
                 .stream()
                 .filter(folder ->
-                        Objects.equals(folder.getParentId(), parentId))
+                        Objects.equals(
+                                folder.getParentId(),
+                                parentId
+                        )
+                )
                 .sorted((a, b) ->
-                        a.getName().compareToIgnoreCase(b.getName()))
+                        a.getName()
+                                .compareToIgnoreCase(
+                                        b.getName()
+                                )
+                )
                 .toList();
     }
 
@@ -51,7 +66,9 @@ public final class ResourceFolderManager
         return getSection(sectionId)
                 .getFolders()
                 .stream()
-                .filter(folder -> folder.getId().equals(folderId))
+                .filter(folder ->
+                        folder.getId().equals(folderId)
+                )
                 .findFirst()
                 .orElse(null);
     }
@@ -61,7 +78,11 @@ public final class ResourceFolderManager
             String name,
             String parentId)
     {
-        var folder = new ResourceFolder(name, parentId);
+        var folder =
+                new ResourceFolder(
+                        name,
+                        parentId
+                );
 
         getSection(sectionId)
                 .getFolders()
@@ -72,24 +93,74 @@ public final class ResourceFolderManager
         return folder;
     }
 
+    public void renameFolder(
+            String sectionId,
+            String folderId,
+            String newName)
+    {
+        var folder =
+                getFolder(
+                        sectionId,
+                        folderId
+                );
+
+        if (folder == null)
+        {
+            return;
+        }
+
+        folder.setName(newName);
+
+        save();
+    }
+
     public boolean folderExists(
             String sectionId,
             String name,
             String parentId)
     {
-        return getChildren(sectionId, parentId)
+        return folderExists(
+                sectionId,
+                name,
+                parentId,
+                null
+        );
+    }
+
+    public boolean folderExists(
+            String sectionId,
+            String name,
+            String parentId,
+            String excludedFolderId)
+    {
+        return getChildren(
+                sectionId,
+                parentId
+        )
                 .stream()
+                .filter(folder ->
+                        excludedFolderId == null
+                                || !folder.getId()
+                                .equals(excludedFolderId)
+                )
                 .anyMatch(folder ->
-                        folder.getName().equalsIgnoreCase(name));
+                        folder.getName()
+                                .equalsIgnoreCase(name)
+                );
     }
 
     public String getParentId(
             String sectionId,
             String folderId)
     {
-        var folder = getFolder(sectionId, folderId);
+        var folder =
+                getFolder(
+                        sectionId,
+                        folderId
+                );
 
-        if (folder == null || folder.getParentId() == null)
+        if (folder == null
+                || folder.getParentId() == null)
         {
             return ResourceFolderData.ROOT_ID;
         }
@@ -107,9 +178,14 @@ public final class ResourceFolderManager
             return rootName;
         }
 
-        var parts = new ArrayDeque<String>();
-        var visitedFolders = new HashSet<String>();
-        var currentId = folderId;
+        var parts =
+                new ArrayDeque<String>();
+
+        var visitedFolders =
+                new HashSet<String>();
+
+        var currentId =
+                folderId;
 
         while (!ResourceFolderData.ROOT_ID.equals(currentId))
         {
@@ -118,16 +194,23 @@ public final class ResourceFolderManager
                 break;
             }
 
-            var folder = getFolder(sectionId, currentId);
+            var folder =
+                    getFolder(
+                            sectionId,
+                            currentId
+                    );
 
             if (folder == null)
             {
                 break;
             }
 
-            parts.addFirst(folder.getName());
+            parts.addFirst(
+                    folder.getName()
+            );
 
-            currentId = folder.getParentId();
+            currentId =
+                    folder.getParentId();
 
             if (currentId == null)
             {
@@ -140,7 +223,12 @@ public final class ResourceFolderManager
             return rootName;
         }
 
-        return rootName + " / " + String.join(" / ", parts);
+        return rootName
+                + " / "
+                + String.join(
+                " / ",
+                parts
+        );
     }
 
     public String getResourceFolder(
@@ -155,63 +243,217 @@ public final class ResourceFolderManager
                 );
     }
 
-    public void moveResources(
-            String sectionId,
-            Collection<String> resourceKeys,
-            String folderId)
-    {
-        var resourceFolders =
-                getSection(sectionId).getResourceFolders();
-
-        for (var resourceKey : resourceKeys)
-        {
-            if (ResourceFolderData.ROOT_ID.equals(folderId))
-            {
-                resourceFolders.remove(resourceKey);
-            }
-            else
-            {
-                resourceFolders.put(resourceKey, folderId);
-            }
-        }
-
-        save();
-    }
-
     public void moveResource(
             String sectionId,
             String resourceKey,
             String folderId)
     {
         var resourceFolders =
-                getSection(sectionId).getResourceFolders();
+                getSection(sectionId)
+                        .getResourceFolders();
 
         if (ResourceFolderData.ROOT_ID.equals(folderId))
         {
-            resourceFolders.remove(resourceKey);
+            resourceFolders.remove(
+                    resourceKey
+            );
         }
         else
         {
-            resourceFolders.put(resourceKey, folderId);
+            resourceFolders.put(
+                    resourceKey,
+                    folderId
+            );
         }
 
         save();
     }
 
-    private ResourceSectionData getSection(String sectionId)
+    public void moveResources(
+            String sectionId,
+            java.util.Collection<String> resourceKeys,
+            String folderId)
     {
-        return data.getSections()
+        var resourceFolders =
+                getSection(sectionId)
+                        .getResourceFolders();
+
+        for (var resourceKey : resourceKeys)
+        {
+            if (ResourceFolderData.ROOT_ID.equals(folderId))
+            {
+                resourceFolders.remove(
+                        resourceKey
+                );
+            }
+            else
+            {
+                resourceFolders.put(
+                        resourceKey,
+                        folderId
+                );
+            }
+        }
+
+        save();
+    }
+
+    public Set<String> getFolderTreeIds(
+            String sectionId,
+            String folderId)
+    {
+        var result =
+                new HashSet<String>();
+
+        if (ResourceFolderData.ROOT_ID.equals(folderId))
+        {
+            return result;
+        }
+
+        if (getFolder(
+                sectionId,
+                folderId) == null)
+        {
+            return result;
+        }
+
+        var pending =
+                new ArrayDeque<String>();
+
+        pending.add(folderId);
+
+        while (!pending.isEmpty())
+        {
+            var currentId =
+                    pending.removeFirst();
+
+            if (!result.add(currentId))
+            {
+                continue;
+            }
+
+            for (var folder :
+                    getSection(sectionId)
+                            .getFolders())
+            {
+                if (Objects.equals(
+                        folder.getParentId(),
+                        currentId))
+                {
+                    pending.addLast(
+                            folder.getId()
+                    );
+                }
+            }
+        }
+
+        return result;
+    }
+
+    public int getFolderTreeSize(
+            String sectionId,
+            String folderId)
+    {
+        return getFolderTreeIds(
+                sectionId,
+                folderId
+        ).size();
+    }
+
+    public Set<String> getResourceKeysInFolderTree(
+            String sectionId,
+            String folderId)
+    {
+        var folderIds =
+                getFolderTreeIds(
+                        sectionId,
+                        folderId
+                );
+
+        var resourceKeys =
+                new HashSet<String>();
+
+        for (var entry :
+                getSection(sectionId)
+                        .getResourceFolders()
+                        .entrySet())
+        {
+            if (folderIds.contains(
+                    entry.getValue()))
+            {
+                resourceKeys.add(
+                        entry.getKey()
+                );
+            }
+        }
+
+        return resourceKeys;
+    }
+
+    public void deleteFolderTree(
+            String sectionId,
+            String folderId)
+    {
+        if (ResourceFolderData.ROOT_ID.equals(folderId))
+        {
+            return;
+        }
+
+        var folderIds =
+                getFolderTreeIds(
+                        sectionId,
+                        folderId
+                );
+
+        if (folderIds.isEmpty())
+        {
+            return;
+        }
+
+        var section =
+                getSection(sectionId);
+
+        section
+                .getFolders()
+                .removeIf(folder ->
+                        folderIds.contains(
+                                folder.getId()
+                        )
+                );
+
+        section
+                .getResourceFolders()
+                .entrySet()
+                .removeIf(entry ->
+                        folderIds.contains(
+                                entry.getValue()
+                        )
+                );
+
+        save();
+    }
+
+    private ResourceSectionData getSection(
+            String sectionId)
+    {
+        return data
+                .getSections()
                 .computeIfAbsent(
                         sectionId,
-                        _ -> new ResourceSectionData()
+                        _ ->
+                                new ResourceSectionData()
                 );
     }
 
     private ResourceFolderData load()
     {
-        var storedData = workspace.getMetadata(METADATA_KEY);
+        var storedData =
+                workspace.getMetadata(
+                        METADATA_KEY
+                );
 
-        if (!(storedData instanceof String json) || json.isBlank())
+        if (!(storedData instanceof String json)
+                || json.isBlank())
         {
             return new ResourceFolderData();
         }
@@ -219,7 +461,10 @@ public final class ResourceFolderManager
         try
         {
             var loadedData =
-                    GSON.fromJson(json, ResourceFolderData.class);
+                    GSON.fromJson(
+                            json,
+                            ResourceFolderData.class
+                    );
 
             return loadedData != null
                     ? loadedData
