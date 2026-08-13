@@ -14,8 +14,14 @@ import java.util.ArrayList;
 import net.mcreator.ui.workspace.IReloadableFilterable;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
+
+import net.mcreator.ui.workspace.resources.TextureType;
+import net.mcreator.workspace.resources.Animation;
+import net.mcreator.workspace.resources.Model;
+import net.resourcefolders.resources.ResourceImportTracker;
+
+import java.util.Collection;
 
 public final class ResourceFoldersInstaller
 {
@@ -85,6 +91,7 @@ public final class ResourceFoldersInstaller
 
             installIntoResourcePanel(
                     mcreator,
+                    resourceTabs,
                     panel,
                     section,
                     folderManager
@@ -109,6 +116,7 @@ public final class ResourceFoldersInstaller
 
     private static void installIntoResourcePanel(
             ModMaker mcreator,
+            JTabbedPane resourceTabs,
             JPanel resourcePanel,
             ResourceSection section,
             ResourceFolderManager folderManager)
@@ -187,19 +195,61 @@ public final class ResourceFoldersInstaller
                 BorderLayout.NORTH
         );
 
-        var refreshers =
-                new ArrayList<Runnable>();
+        if (!(resourcePanel instanceof IReloadableFilterable reloadable))
+        {
+            LOG.warn(
+                    "Resource Folders: {} is not reloadable",
+                    resourcePanel.getClass().getName()
+            );
+
+            return;
+        }
+
+        Runnable reloadSection = () ->
+        {
+            if (SwingUtilities.isEventDispatchThread())
+            {
+                reloadable.reloadElements();
+            }
+            else
+            {
+                SwingUtilities.invokeLater(
+                        reloadable::reloadElements
+                );
+            }
+        };
+
+        var importTracker =
+                new ResourceImportTracker(
+                        mcreator.getWorkspace(),
+                        folderManager,
+                        section,
+                        folderPanel,
+                        () -> getSectionResources(
+                                mcreator,
+                                section
+                        ),
+                        () ->
+                                resourcePanel.isShowing()
+                                        && resourceTabs.getSelectedComponent()
+                                        == resourcePanel,
+                        reloadSection
+                );
+
+        resourcePanel.putClientProperty(
+                "resourceFolders.importTracker",
+                importTracker
+        );
 
         if (section == ResourceSection.TEXTURES)
         {
             installTextureFilters(
                     mcreator,
-                    resourcePanel,
                     resourceLists,
                     folderPanel,
                     folderManager,
                     section,
-                    refreshers
+                    reloadSection
             );
         }
         else
@@ -210,16 +260,14 @@ public final class ResourceFoldersInstaller
                     folderPanel,
                     folderManager,
                     section,
-                    refreshers
+                    reloadSection
             );
         }
 
         folderPanel.addFolderChangedListener(_ ->
         {
-            for (var refresher : refreshers)
-            {
-                refresher.run();
-            }
+            reloadSection.run();
+            importTracker.resetBaseline();
         });
 
         resourcePanel.revalidate();
@@ -229,6 +277,69 @@ public final class ResourceFoldersInstaller
                 "Resource Folders: installed {} section",
                 section.getDisplayName()
         );
+    }
+
+    private static Collection<?> getSectionResources(
+            ModMaker mcreator,
+            ResourceSection section)
+    {
+        return switch (section)
+        {
+            case TEXTURES ->
+            {
+                var textures =
+                        new ArrayList<File>();
+
+                for (var textureType : TextureType.values())
+                {
+                    textures.addAll(
+                            mcreator
+                                    .getFolderManager()
+                                    .getTexturesList(textureType)
+                    );
+                }
+
+                yield textures;
+            }
+
+            case SOUNDS ->
+                    mcreator
+                            .getWorkspace()
+                            .getSoundElements();
+
+            case MODELS ->
+                    Model.getModels(
+                            mcreator.getWorkspace()
+                    );
+
+            case ANIMATIONS ->
+                    Animation.getAnimations(
+                            mcreator.getWorkspace()
+                    );
+
+            case STRUCTURES ->
+                    mcreator
+                            .getFolderManager()
+                            .getStructureList();
+
+            case SCREENSHOTS ->
+            {
+                var screenshotsDirectory =
+                        new File(
+                                mcreator
+                                        .getFolderManager()
+                                        .getClientRunDir(),
+                                "screenshots"
+                        );
+
+                var screenshots =
+                        screenshotsDirectory.listFiles();
+
+                yield screenshots != null
+                        ? List.of(screenshots)
+                        : List.of();
+            }
+        };
     }
 
     private static JTabbedPane findResourceTabs(
@@ -253,7 +364,7 @@ public final class ResourceFoldersInstaller
             ResourceFolderPanel folderPanel,
             ResourceFolderManager folderManager,
             ResourceSection section,
-            List<Runnable> refreshers)
+            Runnable reloadSection)
     {
         for (var resourceList : resourceLists)
         {
@@ -278,16 +389,12 @@ public final class ResourceFoldersInstaller
 
             list.setModel(folderModel);
 
-            refreshers.add(
-                    folderModel::refresh
-            );
-
             ResourceMoveMenuInstaller.install(
                     list,
                     mcreator.getWorkspace(),
                     folderManager,
                     section,
-                    folderModel::refresh
+                    reloadSection
             );
         }
     }
@@ -295,12 +402,11 @@ public final class ResourceFoldersInstaller
     @SuppressWarnings("unchecked")
     private static void installTextureFilters(
             ModMaker mcreator,
-            JPanel resourcePanel,
             List<JList<?>> resourceLists,
             ResourceFolderPanel folderPanel,
             ResourceFolderManager folderManager,
             ResourceSection section,
-            List<Runnable> refreshers)
+            Runnable reloadSection)
     {
         for (var resourceList : resourceLists)
         {
@@ -323,24 +429,16 @@ public final class ResourceFoldersInstaller
 
             list.setModel(folderModel);
 
-            refreshers.add(
-                    folderModel::refreshFolderFilter
-            );
-
             ResourceMoveMenuInstaller.install(
                     list,
                     mcreator.getWorkspace(),
                     folderManager,
                     section,
-                    folderModel::refreshFolderFilter
+                    reloadSection
             );
         }
 
-        if (resourcePanel
-                instanceof IReloadableFilterable reloadable)
-        {
-            reloadable.reloadElements();
-        }
+        reloadSection.run();
     }
 
     private static boolean isInCurrentFolder(
