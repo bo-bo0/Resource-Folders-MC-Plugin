@@ -9,6 +9,7 @@ import net.resourcefolders.folders.ResourceFolderManager;
 import net.resourcefolders.resources.ResourceImportTracker;
 import net.resourcefolders.resources.ResourceKey;
 import net.resourcefolders.resources.ResourceSection;
+import net.resourcefolders.ui.dnd.ResourceAssetTransferHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -192,6 +193,11 @@ public final class ResourceFoldersInstaller
                         section
                 );
 
+
+        folderPanel.installAssetDropTarget(
+                reloadSection
+        );
+
         var header =
                 new JPanel();
 
@@ -299,6 +305,7 @@ public final class ResourceFoldersInstaller
         folderPanel.addFolderChangedListener(_ ->
         {
             reloadSection.run();
+
             importTracker.resetBaseline();
         });
 
@@ -348,6 +355,12 @@ public final class ResourceFoldersInstaller
                     folderModel
             );
 
+            installAssetDragSource(
+                    list,
+                    mcreator,
+                    section
+            );
+
             ResourceMoveMenuInstaller.install(
                     list,
                     mcreator.getWorkspace(),
@@ -393,6 +406,12 @@ public final class ResourceFoldersInstaller
                     folderModel
             );
 
+            installAssetDragSource(
+                    list,
+                    mcreator,
+                    section
+            );
+
             ResourceMoveMenuInstaller.install(
                     list,
                     mcreator.getWorkspace(),
@@ -401,6 +420,23 @@ public final class ResourceFoldersInstaller
                     reloadSection
             );
         }
+    }
+
+    private static void installAssetDragSource(
+            JList<?> list,
+            ModMaker mcreator,
+            ResourceSection section)
+    {
+        list.setTransferHandler(
+                new ResourceAssetTransferHandler(
+                        mcreator.getWorkspace(),
+                        section
+                )
+        );
+
+        list.setDragEnabled(
+                true
+        );
     }
 
     private static boolean isInCurrentFolder(
