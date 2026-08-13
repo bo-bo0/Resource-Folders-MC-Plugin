@@ -96,6 +96,6 @@ tasks.register("runM", JavaExec)
 tasks.named("jar", Jar)
         {
             archiveFileName.set(
-                    "folder-for-resources-${project.version}.zip"
+                    "resource-folders-${project.version}.zip"
             );
         }

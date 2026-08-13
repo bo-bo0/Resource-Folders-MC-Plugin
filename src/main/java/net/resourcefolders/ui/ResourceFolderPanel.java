@@ -7,6 +7,7 @@ import net.resourcefolders.folders.ResourceFolderData;
 import net.resourcefolders.folders.ResourceFolderManager;
 import net.resourcefolders.resources.ResourceFolderContentDeleter;
 import net.resourcefolders.resources.ResourceSection;
+import net.resourcefolders.ui.dnd.ResourceFolderTransferHandler;
 
 import javax.swing.*;
 import java.awt.*;
@@ -91,6 +92,22 @@ public final class ResourceFolderPanel
     {
         folderChangedListeners.add(
                 listener
+        );
+    }
+
+    public void installAssetDropTarget(
+            Runnable reloadSection)
+    {
+        folderList.setDropMode(
+                DropMode.ON
+        );
+
+        folderList.setTransferHandler(
+                new ResourceFolderTransferHandler(
+                        folderManager,
+                        section,
+                        reloadSection
+                )
         );
     }
 
@@ -685,11 +702,20 @@ public final class ResourceFolderPanel
                 boolean isSelected,
                 boolean cellHasFocus)
         {
+            var dropLocation =
+                    list.getDropLocation();
+
+            boolean isDropTarget =
+                    dropLocation != null
+                            && !dropLocation.isInsert()
+                            && dropLocation.getIndex()
+                            == index;
+
             super.getListCellRendererComponent(
                     list,
                     value,
                     index,
-                    isSelected,
+                    isSelected || isDropTarget,
                     cellHasFocus
             );
 
