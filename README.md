@@ -24,7 +24,7 @@ For example, a `Bosses` folder inside **Textures** is completely separate from a
 
 ### Folders and subfolders
 
-To create a folder you can use the <code>Create button</code> in the Resource Folders menu (the one with a <code>+</code> on it):
+To create a folder you can use the <code>Create button</code> (the one with a <code>+</code> on it) in the Resource Folders menu:
 
 <div align="center">
     <img src="reporesources/folder_menu.png" alt="Resource Folders menu" align="center">
