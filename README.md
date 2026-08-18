@@ -1,4 +1,8 @@
-# Resource Folders
+<div align="center">
+    <img src="reporesources/logo.png" alt="Resource Folders logo" width=160>
+</div>
+
+<h1 align="center">Resource Folders</h1> 
 
 Resource Folders is a MCreator plugin that adds folders to the **Resources** tab, making it much easier to organize large projects.
 
@@ -20,7 +24,9 @@ For example, a `Bosses` folder inside **Textures** is completely separate from a
 
 To create a folder you can use the <code>Create button</code> in the Resource Folders menu (the one with a <code>+</code> on it):
 
-<img src="reporesources/folder_menu.png" alt="Resource Folders menu" align="center">
+<div align="center">
+    <img src="reporesources/folder_menu.png" alt="Resource Folders menu" align="center">
+</div>
 
 Then, you can enter a folder by double clicking on it. The other buttons are used to: go back, rename and delete.
 
@@ -61,3 +67,13 @@ Resources can be moved at any time by right-clicking on them and using the <code
 You can also select multiple resources and move them together.
 
 Moving a resource back to the main resource category places it in the root folder again.
+
+### What things are safe to do?
+
+- *Using the plugin in an already existing workspace* - **Safe**
+
+- *Renaming a folder that contains resources used by different mod elements* - **Safe**
+
+- *Moving resources that are used by different mod elements in another folder* - **Safe**
+
+- *Deleting a folder that contains resources* - **NOT safe! That would delete all the resources inside that folder, and of course if some mod elements were using them they would display an error**
