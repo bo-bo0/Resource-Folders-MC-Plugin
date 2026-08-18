@@ -54,7 +54,7 @@ Textures
 
 ### Import directly into folders
 
-When you import or create a new resource while inside a folder, Resource Folders automatically places it in the folder you are currently viewing.
+When you import a new resource while inside a folder, Resource Folders automatically places it in the folder you are currently viewing.
 
 For example:
 
