@@ -4,6 +4,8 @@
 
 <h1 align="center">Resource Folders</h1> 
 
+<b>Supported MCreator versions</b>: <code>2026.2</code>
+
 Resource Folders is a MCreator plugin that adds folders to the **Resources** tab, making it much easier to organize large projects.
 
 Instead of having every texture, model, sound, animation, structure, or screenshot displayed in one long list, you can organize your resources into folders and subfolders directly inside MCreator.
@@ -28,7 +30,9 @@ To create a folder you can use the <code>Create button</code> in the Resource Fo
     <img src="reporesources/folder_menu.png" alt="Resource Folders menu" align="center">
 </div>
 
-Then, you can enter a folder by double clicking on it. The other buttons are used to: go back, rename and delete.
+<br>
+
+Then, you can enter a folder by double-clicking on it. The other buttons are used to: go back, rename and delete.
 
 Create as many folders and nested subfolders as you need.
 
@@ -62,7 +66,7 @@ No need to import it first and move it afterward.
 
 ### Move resources between folders
 
-Resources can be moved at any time by right-clicking on them and using the <code>Move to folder</code> option or by simply dragging and dropping them in their new location.
+Resources can be moved at any time by right-clicking on them and using the <code>Move to folder</code> option or by simply dragging and dropping them into their new location.
 
 You can also select multiple resources and move them together.
 
