@@ -22,6 +22,12 @@ import java.util.function.Consumer;
 public final class ResourceFolderPanel
         extends JPanel
 {
+    private static final int FOLDER_CELL_WIDTH = 150;
+    private static final int FOLDER_CELL_HEIGHT = 44;
+    private static final int MINIMUM_SCROLL_PANE_HEIGHT = 56;
+    private static final int SCROLL_PANE_VERTICAL_PADDING = 12;
+    private static final int MINIMUM_RESOURCE_AREA_HEIGHT = 120;
+
     private final ModMaker mcreator;
     private final ResourceFolderManager folderManager;
     private final ResourceSection section;
@@ -32,6 +38,9 @@ public final class ResourceFolderPanel
 
     private final JList<ResourceFolder> folderList =
             new JList<>(folderListModel);
+
+    private final JScrollPane folderScrollPane =
+            new JScrollPane(folderList);
 
     private final ResourceFolderBreadcrumb breadcrumb;
 
@@ -91,6 +100,101 @@ public final class ResourceFolderPanel
     public String getCurrentFolderId()
     {
         return currentFolderId;
+    }
+
+    @Override
+    public Dimension getPreferredSize()
+    {
+        var preferredSize =
+                super.getPreferredSize();
+
+        int availableWidth =
+                getWidth();
+
+        if (availableWidth <= 0
+                && getParent() != null)
+        {
+            availableWidth =
+                    getParent().getWidth();
+        }
+
+        if (availableWidth <= 0)
+        {
+            return preferredSize;
+        }
+
+        var scrollPaneInsets =
+                folderScrollPane.getInsets();
+
+        int listWidth =
+                Math.max(
+                        FOLDER_CELL_WIDTH,
+                        availableWidth
+                                - scrollPaneInsets.left
+                                - scrollPaneInsets.right
+                );
+
+        int columns =
+                Math.max(
+                        1,
+                        listWidth / FOLDER_CELL_WIDTH
+                );
+
+        int rows =
+                Math.max(
+                        1,
+                        (folderListModel.size()
+                                + columns - 1)
+                                / columns
+                );
+
+        int desiredScrollPaneHeight =
+                rows * FOLDER_CELL_HEIGHT
+                        + SCROLL_PANE_VERTICAL_PADDING;
+
+        int nonListHeight =
+                preferredSize.height
+                        - folderScrollPane
+                        .getPreferredSize()
+                        .height;
+
+        int maximumScrollPaneHeight =
+                desiredScrollPaneHeight;
+
+        var rootPane =
+                getRootPane();
+
+        if (rootPane != null
+                && rootPane.getHeight() > 0)
+        {
+            var panelLocation =
+                    SwingUtilities.convertPoint(
+                            this,
+                            0,
+                            0,
+                            rootPane
+                    );
+
+            maximumScrollPaneHeight =
+                    rootPane.getHeight()
+                            - panelLocation.y
+                            - nonListHeight
+                            - MINIMUM_RESOURCE_AREA_HEIGHT;
+        }
+
+        int scrollPaneHeight =
+                Math.max(
+                        MINIMUM_SCROLL_PANE_HEIGHT,
+                        Math.min(
+                                desiredScrollPaneHeight,
+                                maximumScrollPaneHeight
+                        )
+                );
+
+        return new Dimension(
+                preferredSize.width,
+                nonListHeight + scrollPaneHeight
+        );
     }
 
     public void addFolderChangedListener(
@@ -235,11 +339,11 @@ public final class ResourceFolderPanel
         folderList.setVisibleRowCount(0);
 
         folderList.setFixedCellWidth(
-                150
+                FOLDER_CELL_WIDTH
         );
 
         folderList.setFixedCellHeight(
-                44
+                FOLDER_CELL_HEIGHT
         );
 
         folderList.setSelectionMode(
@@ -295,28 +399,23 @@ public final class ResourceFolderPanel
                 }
         );
 
-        var scrollPane =
-                new JScrollPane(
-                        folderList
-                );
+        folderScrollPane.setOpaque(false);
 
-        scrollPane.setOpaque(false);
-
-        scrollPane
+        folderScrollPane
                 .getViewport()
                 .setOpaque(false);
 
-        scrollPane.setHorizontalScrollBarPolicy(
+        folderScrollPane.setHorizontalScrollBarPolicy(
                 ScrollPaneConstants
                         .HORIZONTAL_SCROLLBAR_NEVER
         );
 
-        scrollPane.setVerticalScrollBarPolicy(
+        folderScrollPane.setVerticalScrollBarPolicy(
                 ScrollPaneConstants
                         .VERTICAL_SCROLLBAR_AS_NEEDED
         );
 
-        scrollPane.setBorder(
+        folderScrollPane.setBorder(
                 BorderFactory.createEmptyBorder(
                         0,
                         5,
@@ -325,15 +424,15 @@ public final class ResourceFolderPanel
                 )
         );
 
-        scrollPane.setPreferredSize(
+        folderScrollPane.setPreferredSize(
                 new Dimension(
                         0,
-                        56
+                        MINIMUM_SCROLL_PANE_HEIGHT
                 )
         );
 
         add(
-                scrollPane,
+                folderScrollPane,
                 BorderLayout.CENTER
         );
     }
