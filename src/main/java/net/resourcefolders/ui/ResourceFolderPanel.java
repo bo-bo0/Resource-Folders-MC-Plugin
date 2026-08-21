@@ -229,7 +229,10 @@ public final class ResourceFolderPanel
                 JList.HORIZONTAL_WRAP
         );
 
-        folderList.setVisibleRowCount(1);
+        // Let the viewport width determine how many folders fit on a row.
+        // A positive value would force that many rows and make the list grow
+        // horizontally instead of wrapping when it reaches the right edge.
+        folderList.setVisibleRowCount(0);
 
         folderList.setFixedCellWidth(
                 150
@@ -305,12 +308,12 @@ public final class ResourceFolderPanel
 
         scrollPane.setHorizontalScrollBarPolicy(
                 ScrollPaneConstants
-                        .HORIZONTAL_SCROLLBAR_AS_NEEDED
+                        .HORIZONTAL_SCROLLBAR_NEVER
         );
 
         scrollPane.setVerticalScrollBarPolicy(
                 ScrollPaneConstants
-                        .VERTICAL_SCROLLBAR_NEVER
+                        .VERTICAL_SCROLLBAR_AS_NEEDED
         );
 
         scrollPane.setBorder(
