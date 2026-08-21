@@ -333,9 +333,6 @@ public final class ResourceFolderPanel
                 JList.HORIZONTAL_WRAP
         );
 
-        // Let the viewport width determine how many folders fit on a row.
-        // A positive value would force that many rows and make the list grow
-        // horizontally instead of wrapping when it reaches the right edge.
         folderList.setVisibleRowCount(0);
 
         folderList.setFixedCellWidth(
