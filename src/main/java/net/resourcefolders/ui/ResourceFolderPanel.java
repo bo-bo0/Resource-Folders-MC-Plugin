@@ -92,11 +92,6 @@ public final class ResourceFolderPanel
         refresh();
     }
 
-    public ResourceSection getSection()
-    {
-        return section;
-    }
-
     public String getCurrentFolderId()
     {
         return currentFolderId;

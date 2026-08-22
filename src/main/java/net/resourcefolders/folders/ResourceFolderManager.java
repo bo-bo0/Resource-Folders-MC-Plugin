@@ -27,11 +27,6 @@ public final class ResourceFolderManager
         this.data = load();
     }
 
-    public ResourceFolderData getData()
-    {
-        return data;
-    }
-
     public List<ResourceFolder> getChildren(
             String sectionId,
             String parentId)
@@ -168,69 +163,6 @@ public final class ResourceFolderManager
         return folder.getParentId();
     }
 
-    public String getPath(
-            String sectionId,
-            String rootName,
-            String folderId)
-    {
-        if (ResourceFolderData.ROOT_ID.equals(folderId))
-        {
-            return rootName;
-        }
-
-        var parts =
-                new ArrayDeque<String>();
-
-        var visitedFolders =
-                new HashSet<String>();
-
-        var currentId =
-                folderId;
-
-        while (!ResourceFolderData.ROOT_ID.equals(currentId))
-        {
-            if (!visitedFolders.add(currentId))
-            {
-                break;
-            }
-
-            var folder =
-                    getFolder(
-                            sectionId,
-                            currentId
-                    );
-
-            if (folder == null)
-            {
-                break;
-            }
-
-            parts.addFirst(
-                    folder.getName()
-            );
-
-            currentId =
-                    folder.getParentId();
-
-            if (currentId == null)
-            {
-                break;
-            }
-        }
-
-        if (parts.isEmpty())
-        {
-            return rootName;
-        }
-
-        return rootName
-                + " / "
-                + String.join(
-                " / ",
-                parts
-        );
-    }
-
     public String getResourceFolder(
             String sectionId,
             String resourceKey)
@@ -241,32 +173,6 @@ public final class ResourceFolderManager
                         resourceKey,
                         ResourceFolderData.ROOT_ID
                 );
-    }
-
-    public void moveResource(
-            String sectionId,
-            String resourceKey,
-            String folderId)
-    {
-        var resourceFolders =
-                getSection(sectionId)
-                        .getResourceFolders();
-
-        if (ResourceFolderData.ROOT_ID.equals(folderId))
-        {
-            resourceFolders.remove(
-                    resourceKey
-            );
-        }
-        else
-        {
-            resourceFolders.put(
-                    resourceKey,
-                    folderId
-            );
-        }
-
-        save();
     }
 
     public void moveResources(
