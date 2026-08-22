@@ -26,9 +26,4 @@ public final class ResourceFolderFilterModel<T>
                 resourceNameSupplier
         );
     }
-
-    public void refreshFolderFilter()
-    {
-        refilter();
-    }
 }
