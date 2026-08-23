@@ -12,6 +12,8 @@ Instead of having every texture, model, sound, animation, structure, or screensh
 
 It's completely safe to start using this plugin in already existing workspaces, even to organize resources that are already used by different mod elements.
 
+<i>Requires Java plugins to be enabled</i>
+
 ## Features
 
 ### Organize every resource category
