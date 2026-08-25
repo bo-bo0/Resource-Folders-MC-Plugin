@@ -160,6 +160,9 @@ public final class ResourceFoldersInstaller
                         resourcePanel
                 );
 
+        var resourceModels =
+                new ArrayList<ListModel<?>>();
+
         Runnable reloadSection = () ->
         {
             if (SwingUtilities
@@ -261,7 +264,8 @@ public final class ResourceFoldersInstaller
                     folderPanel,
                     folderManager,
                     section,
-                    reloadSection
+                    reloadSection,
+                    resourceModels
             );
         }
         else
@@ -272,7 +276,8 @@ public final class ResourceFoldersInstaller
                     folderPanel,
                     folderManager,
                     section,
-                    reloadSection
+                    reloadSection,
+                    resourceModels
             );
         }
 
@@ -284,6 +289,7 @@ public final class ResourceFoldersInstaller
                         folderManager,
                         section,
                         folderPanel,
+                        resourceModels,
                         () ->
                                 getSectionResources(
                                         mcreator,
@@ -300,6 +306,11 @@ public final class ResourceFoldersInstaller
         resourcePanel.putClientProperty(
                 "resourceFolders.importTracker",
                 importTracker
+        );
+
+        resourceTabs.addChangeListener(_ ->
+                importTracker
+                        .sectionActivityChanged()
         );
 
         folderPanel.addFolderChangedListener(_ ->
@@ -324,7 +335,8 @@ public final class ResourceFoldersInstaller
             ResourceFolderPanel folderPanel,
             ResourceFolderManager folderManager,
             ResourceSection section,
-            Runnable reloadSection)
+            Runnable reloadSection,
+            Collection<ListModel<?>> resourceModels)
     {
         for (var resourceList :
                 resourceLists)
@@ -333,9 +345,11 @@ public final class ResourceFoldersInstaller
                     (JList<Object>)
                             resourceList;
 
-            var originalModel =
-                    (ListModel<Object>)
-                            list.getModel();
+            var originalModel = list.getModel();
+
+            resourceModels.add(
+                    originalModel
+            );
 
             var folderModel =
                     new FolderFilteredListModel<>(
@@ -377,7 +391,8 @@ public final class ResourceFoldersInstaller
             ResourceFolderPanel folderPanel,
             ResourceFolderManager folderManager,
             ResourceSection section,
-            Runnable reloadSection)
+            Runnable reloadSection,
+            Collection<ListModel<?>> resourceModels)
     {
         for (var resourceList :
                 resourceLists)
@@ -402,6 +417,10 @@ public final class ResourceFoldersInstaller
                     );
 
             list.setModel(
+                    folderModel
+            );
+
+            resourceModels.add(
                     folderModel
             );
 

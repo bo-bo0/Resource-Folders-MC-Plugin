@@ -6,21 +6,27 @@ import net.resourcefolders.folders.ResourceFolderManager;
 import net.resourcefolders.ui.ResourceFolderPanel;
 
 import javax.swing.*;
+import javax.swing.event.ListDataEvent;
+import javax.swing.event.ListDataListener;
+import java.awt.event.HierarchyEvent;
+import java.awt.event.HierarchyListener;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 public final class ResourceImportTracker
 {
-    private static final int CHECK_INTERVAL_MS =
-            300;
+    private static final int CHANGE_DEBOUNCE_MS = 50;
 
     private final Workspace workspace;
     private final ResourceFolderManager folderManager;
     private final ResourceSection section;
     private final ResourceFolderPanel folderPanel;
+
+    private final Set<ListModel<?>> resourceModels;
 
     private final Supplier<? extends Collection<?>>
             resourcesSupplier;
@@ -33,16 +39,46 @@ public final class ResourceImportTracker
     private final Set<String> knownResourceKeys =
             new HashSet<>();
 
-    private final Timer timer;
+    private final Timer changeDebounceTimer;
+
+    private final ListDataListener resourceChangesListener =
+            new ListDataListener()
+            {
+                @Override
+                public void intervalAdded(
+                        ListDataEvent event)
+                {
+                    scheduleCheck();
+                }
+
+                @Override
+                public void intervalRemoved(
+                        ListDataEvent event)
+                {
+                    scheduleCheck();
+                }
+
+                @Override
+                public void contentsChanged(
+                        ListDataEvent event)
+                {
+                    scheduleCheck();
+                }
+            };
+
+    private final HierarchyListener hierarchyListener =
+            this::hierarchyChanged;
 
     private boolean sectionWasActive;
     private boolean becameDisplayable;
+    private boolean disposed;
 
     public ResourceImportTracker(
             Workspace workspace,
             ResourceFolderManager folderManager,
             ResourceSection section,
             ResourceFolderPanel folderPanel,
+            Collection<? extends ListModel<?>> resourceModels,
             Supplier<? extends Collection<?>> resourcesSupplier,
             BooleanSupplier sectionActiveSupplier,
             Runnable refresh)
@@ -51,6 +87,10 @@ public final class ResourceImportTracker
         this.folderManager = folderManager;
         this.section = section;
         this.folderPanel = folderPanel;
+        this.resourceModels =
+                new LinkedHashSet<>(
+                        resourceModels
+                );
         this.resourcesSupplier = resourcesSupplier;
         this.sectionActiveSupplier = sectionActiveSupplier;
         this.refresh = refresh;
@@ -60,49 +100,115 @@ public final class ResourceImportTracker
         sectionWasActive =
                 sectionActiveSupplier.getAsBoolean();
 
-        timer =
+        becameDisplayable =
+                folderPanel.isDisplayable();
+
+        changeDebounceTimer =
                 new Timer(
-                        CHECK_INTERVAL_MS,
+                        CHANGE_DEBOUNCE_MS,
                         _ ->
                                 checkForNewResources()
                 );
 
-        timer.setCoalesce(true);
-        timer.start();
+        changeDebounceTimer.setCoalesce(true);
+        changeDebounceTimer.setRepeats(false);
+
+        this.resourceModels.forEach(
+                model ->
+                        model.addListDataListener(
+                                resourceChangesListener
+                        )
+        );
+
+        folderPanel.addHierarchyListener(
+                hierarchyListener
+        );
     }
 
     public void resetBaseline()
     {
+        if (disposed)
+        {
+            return;
+        }
+
+        changeDebounceTimer.stop();
+
         replaceKnownResources();
     }
 
-    private void checkForNewResources()
+    public void sectionActivityChanged()
     {
-        updateLifecycleState();
+        updateSectionActivity();
+    }
 
-        if (!timer.isRunning())
+    private boolean updateSectionActivity()
+    {
+        if (disposed)
         {
-            return;
+            return false;
         }
 
         boolean sectionActive =
                 sectionActiveSupplier
                         .getAsBoolean();
 
-        if (sectionActive
-                && !sectionWasActive)
-        {
-            replaceKnownResources();
+        boolean becameActive =
+                sectionActive
+                        && !sectionWasActive;
 
-            sectionWasActive = true;
+        if (becameActive)
+        {
+            changeDebounceTimer.stop();
+
+            replaceKnownResources();
+        }
+
+        sectionWasActive = sectionActive;
+
+        return becameActive;
+    }
+
+    private void scheduleCheck()
+    {
+        if (!SwingUtilities
+                .isEventDispatchThread())
+        {
+            SwingUtilities.invokeLater(
+                    this::scheduleCheck
+            );
 
             return;
         }
 
-        if (!sectionActive)
+        if (updateSectionActivity())
         {
-            sectionWasActive = false;
+            return;
+        }
 
+        if (!sectionWasActive)
+        {
+            return;
+        }
+
+        if (ResourceFolderData.ROOT_ID.equals(
+                folderPanel.getCurrentFolderId()))
+        {
+            return;
+        }
+
+        changeDebounceTimer.restart();
+    }
+
+    private void checkForNewResources()
+    {
+        if (updateSectionActivity())
+        {
+            return;
+        }
+
+        if (!sectionWasActive)
+        {
             return;
         }
 
@@ -181,18 +287,53 @@ public final class ResourceImportTracker
         return resourceKeys;
     }
 
-    private void updateLifecycleState()
+    private void hierarchyChanged(
+            HierarchyEvent event)
     {
-        if (folderPanel.isDisplayable())
+        if ((event.getChangeFlags()
+                & HierarchyEvent.DISPLAYABILITY_CHANGED)
+                != 0)
         {
-            becameDisplayable = true;
+            if (folderPanel.isDisplayable())
+            {
+                becameDisplayable = true;
+            }
+            else if (becameDisplayable)
+            {
+                dispose();
 
+                return;
+            }
+        }
+
+        if ((event.getChangeFlags()
+                & HierarchyEvent.SHOWING_CHANGED)
+                != 0)
+        {
+            sectionActivityChanged();
+        }
+    }
+
+    private void dispose()
+    {
+        if (disposed)
+        {
             return;
         }
 
-        if (becameDisplayable)
-        {
-            timer.stop();
-        }
+        disposed = true;
+
+        changeDebounceTimer.stop();
+
+        resourceModels.forEach(
+                model ->
+                        model.removeListDataListener(
+                                resourceChangesListener
+                        )
+        );
+
+        folderPanel.removeHierarchyListener(
+                hierarchyListener
+        );
     }
 }
