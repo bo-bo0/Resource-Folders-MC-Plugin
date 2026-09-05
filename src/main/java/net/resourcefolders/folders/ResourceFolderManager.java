@@ -204,6 +204,29 @@ public final class ResourceFolderManager
         save();
     }
 
+    public void removeMissingResourceMappings(
+            String sectionId,
+            Set<String> existingResourceKeys)
+    {
+        var resourceFolders =
+                getSection(sectionId)
+                        .getResourceFolders();
+
+        boolean changed =
+                resourceFolders
+                        .keySet()
+                        .removeIf(resourceKey ->
+                                !existingResourceKeys.contains(
+                                        resourceKey
+                                )
+                        );
+
+        if (changed)
+        {
+            save();
+        }
+    }
+
     public Set<String> getFolderTreeIds(
             String sectionId,
             String folderId)

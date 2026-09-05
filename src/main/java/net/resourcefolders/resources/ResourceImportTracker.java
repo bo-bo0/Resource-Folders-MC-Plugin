@@ -191,12 +191,6 @@ public final class ResourceImportTracker
             return;
         }
 
-        if (ResourceFolderData.ROOT_ID.equals(
-                folderPanel.getCurrentFolderId()))
-        {
-            return;
-        }
-
         changeDebounceTimer.restart();
     }
 
@@ -212,17 +206,13 @@ public final class ResourceImportTracker
             return;
         }
 
-        var currentFolderId =
-                folderPanel.getCurrentFolderId();
-
-        if (ResourceFolderData.ROOT_ID.equals(
-                currentFolderId))
-        {
-            return;
-        }
-
         var currentResourceKeys =
                 getCurrentResourceKeys();
+
+        folderManager.removeMissingResourceMappings(
+                section.getId(),
+                currentResourceKeys
+        );
 
         var newResourceKeys =
                 new HashSet<>(
@@ -239,7 +229,12 @@ public final class ResourceImportTracker
                 currentResourceKeys
         );
 
-        if (newResourceKeys.isEmpty())
+        var currentFolderId =
+                folderPanel.getCurrentFolderId();
+
+        if (ResourceFolderData.ROOT_ID.equals(
+                currentFolderId)
+                || newResourceKeys.isEmpty())
         {
             return;
         }
@@ -255,10 +250,18 @@ public final class ResourceImportTracker
 
     private void replaceKnownResources()
     {
+        var currentResourceKeys =
+                getCurrentResourceKeys();
+
+        folderManager.removeMissingResourceMappings(
+                section.getId(),
+                currentResourceKeys
+        );
+
         knownResourceKeys.clear();
 
         knownResourceKeys.addAll(
-                getCurrentResourceKeys()
+                currentResourceKeys
         );
     }
 

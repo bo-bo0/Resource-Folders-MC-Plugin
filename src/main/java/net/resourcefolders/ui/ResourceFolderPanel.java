@@ -1,11 +1,15 @@
 package net.resourcefolders.ui;
 
+import net.mcreator.ui.dialogs.SearchUsagesDialog;
+import net.mcreator.ui.init.L10N;
 import net.mcreator.ui.init.UIRES;
 import net.mcreator.ui.variants.modmaker.ModMaker;
+import net.mcreator.workspace.elements.ModElement;
 import net.resourcefolders.folders.ResourceFolder;
 import net.resourcefolders.folders.ResourceFolderData;
 import net.resourcefolders.folders.ResourceFolderManager;
 import net.resourcefolders.resources.ResourceFolderContentDeleter;
+import net.resourcefolders.resources.ResourceFolderUsageFinder;
 import net.resourcefolders.resources.ResourceSection;
 import net.resourcefolders.ui.dnd.ResourceFolderTransferHandler;
 
@@ -17,6 +21,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 
 public final class ResourceFolderPanel
@@ -580,29 +585,10 @@ public final class ResourceFolderPanel
                         folderTreeSize - 1
                 );
 
-        var message =
-                "Delete folder \""
-                        + folder.getName()
-                        + "\"?\n\n"
-                        + "This will permanently delete:\n"
-                        + resourceKeys.size()
-                        + " resource(s)\n"
-                        + nestedFolderCount
-                        + " subfolder(s)\n\n"
-                        + "Resources will also be deleted from the workspace.\n"
-                        + "This action cannot be undone.";
-
-        int result =
-                JOptionPane.showConfirmDialog(
-                        mcreator,
-                        message,
-                        "Delete Resource Folder",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.WARNING_MESSAGE
-                );
-
-        if (result
-                != JOptionPane.YES_OPTION)
+        if (!confirmFolderDeletion(
+                folder,
+                resourceKeys,
+                nestedFolderCount))
         {
             return;
         }
@@ -622,6 +608,99 @@ public final class ResourceFolderPanel
         refresh();
 
         notifyFolderChanged();
+    }
+
+    private boolean confirmFolderDeletion(
+            ResourceFolder folder,
+            Set<String> resourceKeys,
+            int nestedFolderCount)
+    {
+        mcreator.setCursor(
+                Cursor.getPredefinedCursor(
+                        Cursor.WAIT_CURSOR
+                )
+        );
+
+        final Set<ModElement> references;
+
+        try
+        {
+            references =
+                    ResourceFolderUsageFinder.findUsages(
+                            mcreator,
+                            section,
+                            resourceKeys
+                    );
+        }
+        finally
+        {
+            mcreator.setCursor(
+                    Cursor.getDefaultCursor()
+            );
+        }
+
+        var messageSuffix =
+                "Folder &quot;"
+                        + escapeHtml(folder.getName())
+                        + "&quot; contains "
+                        + resourceKeys.size()
+                        + " resource(s) and "
+                        + nestedFolderCount
+                        + " subfolder(s).<br>"
+                        + "The folder structure will also be deleted. "
+                        + "This action cannot be undone.";
+
+        return SearchUsagesDialog.showDeleteDialog(
+                mcreator,
+                getResourceUsageType(),
+                references,
+                messageSuffix
+        );
+    }
+
+    private String getResourceUsageType()
+    {
+        return switch (section)
+        {
+            case TEXTURES ->
+                    L10N.t(
+                            "dialog.search_usages.type.resource.texture"
+                    );
+
+            case MODELS ->
+                    L10N.t(
+                            "dialog.search_usages.type.resource.model"
+                    );
+
+            case ANIMATIONS ->
+                    L10N.t(
+                            "dialog.search_usages.type.resource.animation"
+                    );
+
+            case SOUNDS ->
+                    L10N.t(
+                            "dialog.search_usages.type.resource.sound"
+                    );
+
+            case STRUCTURES ->
+                    L10N.t(
+                            "dialog.search_usages.type.resource.structure"
+                    );
+
+            case SCREENSHOTS ->
+                    "screenshot";
+        };
+    }
+
+    private static String escapeHtml(
+            String value)
+    {
+        return value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
 
     private boolean validateFolderName(
