@@ -12,6 +12,7 @@ import net.resourcefolders.resources.ResourceFolderContentDeleter;
 import net.resourcefolders.resources.ResourceFolderUsageFinder;
 import net.resourcefolders.resources.ResourceSection;
 import net.resourcefolders.ui.dnd.ResourceFolderTransferHandler;
+import org.apache.commons.text.StringEscapeUtils;
 
 import javax.swing.*;
 import java.awt.*;
@@ -641,7 +642,7 @@ public final class ResourceFolderPanel
 
         var messageSuffix =
                 "Folder &quot;"
-                        + escapeHtml(folder.getName())
+                        + StringEscapeUtils.escapeHtml3(folder.getName())
                         + "&quot; contains "
                         + resourceKeys.size()
                         + " resource(s) and "
@@ -690,17 +691,6 @@ public final class ResourceFolderPanel
             case SCREENSHOTS ->
                     "screenshot";
         };
-    }
-
-    private static String escapeHtml(
-            String value)
-    {
-        return value
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&#39;");
     }
 
     private boolean validateFolderName(
