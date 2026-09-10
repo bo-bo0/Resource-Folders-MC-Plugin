@@ -8,7 +8,7 @@ import net.mcreator.workspace.elements.ModElement;
 import net.resourcefolders.folders.ResourceFolder;
 import net.resourcefolders.folders.ResourceFolderData;
 import net.resourcefolders.folders.ResourceFolderManager;
-import net.resourcefolders.resources.ResourceFolderContentDeleter;
+import net.resourcefolders.resources.deletion.ResourceFolderContentDeleter;
 import net.resourcefolders.resources.ResourceFolderUsageFinder;
 import net.resourcefolders.resources.ResourceSection;
 import net.resourcefolders.ui.dnd.ResourceFolderTransferHandler;

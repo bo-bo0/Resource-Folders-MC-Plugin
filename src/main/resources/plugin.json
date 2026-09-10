@@ -7,7 +7,7 @@
   "javaplugin": "net.resourcefolders.ResourceFoldersPlugin",
   "info": {
     "name": "Resource Folders",
-    "version": "1.2.1",
+    "version": "1.3.0",
     "description": "A MCreator plugin that adds folders to the Resources tab.",
     "author": "bo bo"
   }
