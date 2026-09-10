@@ -78,7 +78,6 @@ public final class ResourceFolderPanel
             ResourceSection section)
     {
         super(new BorderLayout());
-
         this.mcreator = mcreator;
         this.folderManager = folderManager;
         this.section = section;
@@ -594,12 +593,27 @@ public final class ResourceFolderPanel
             return;
         }
 
-        ResourceFolderContentDeleter
-                .deleteResources(
-                        mcreator,
-                        section,
-                        resourceKeys
-                );
+        var deletionResult =
+                ResourceFolderContentDeleter
+                        .deleteResources(
+                                mcreator,
+                                section,
+                                resourceKeys
+                        );
+
+        if (!deletionResult.successful())
+        {
+            showDeletionMessages(
+                    "Resource Deletion Failed",
+                    "The folder was not deleted and its metadata was preserved. Resources moved before the failure were restored when possible.",
+                    deletionResult.messages(),
+                    JOptionPane.ERROR_MESSAGE
+            );
+
+            notifyFolderChanged();
+
+            return;
+        }
 
         folderManager.deleteFolderTree(
                 section.getId(),
@@ -609,6 +623,61 @@ public final class ResourceFolderPanel
         refresh();
 
         notifyFolderChanged();
+
+        if (!deletionResult.messages().isEmpty())
+        {
+            showDeletionMessages(
+                    "Resource Cleanup Warning",
+                    "The resources and folder were removed, but some temporary staged data could not be deleted.",
+                    deletionResult.messages(),
+                    JOptionPane.WARNING_MESSAGE
+            );
+        }
+    }
+
+    private void showDeletionMessages(
+            String title,
+            String summary,
+            List<String> messages,
+            int messageType)
+    {
+        var details =
+                new StringBuilder(
+                        summary
+                );
+
+        int displayedMessages =
+                Math.min(
+                        messages.size(),
+                        10
+                );
+
+        for (int i = 0;
+             i < displayedMessages;
+             i++)
+        {
+            details
+                    .append("\n\n- ")
+                    .append(messages.get(i));
+        }
+
+        if (messages.size() > displayedMessages)
+        {
+            details
+                    .append("\n\n... and ")
+                    .append(
+                            messages.size()
+                                    - displayedMessages
+                    )
+                    .append(" more issue(s).");
+        }
+
+        JOptionPane.showMessageDialog(
+                mcreator,
+                details.toString(),
+                title,
+                messageType
+        );
     }
 
     private boolean confirmFolderDeletion(
