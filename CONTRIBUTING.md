@@ -9,6 +9,12 @@ Add a `gradle.properties` file containing:
 
 `org.gradle.java.installations.paths=<PATH_TO_MCREATOR_JDK>`
 
+Then you can use the `runM` gradle task to run the plugin
+
+<hr>
+
+You can use the `jar` gradle task to build the plugin
+
 <br>
 
 Pull requests, issues, comments, etc  are welcome
