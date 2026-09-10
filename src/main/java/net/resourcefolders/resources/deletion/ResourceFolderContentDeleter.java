@@ -1,4 +1,4 @@
-package net.resourcefolders.resources;
+package net.resourcefolders.resources.deletion;
 
 import net.mcreator.ui.variants.modmaker.ModMaker;
 import net.mcreator.ui.views.editor.image.metadata.MetadataManager;
@@ -6,6 +6,8 @@ import net.mcreator.ui.workspace.resources.TextureType;
 import net.mcreator.workspace.elements.SoundElement;
 import net.mcreator.workspace.resources.Animation;
 import net.mcreator.workspace.resources.Model;
+import net.resourcefolders.resources.ResourceKey;
+import net.resourcefolders.resources.ResourceSection;
 
 import java.io.File;
 import java.io.IOException;
@@ -715,53 +717,5 @@ public final class ResourceFolderContentDeleter
                 : exception
                 .getClass()
                 .getSimpleName();
-    }
-
-    public record DeletionResult(
-            boolean successful,
-            List<String> messages)
-    {
-        public DeletionResult
-        {
-            messages =
-                    List.copyOf(messages);
-        }
-
-        private static DeletionResult success()
-        {
-            return success(
-                    List.of()
-            );
-        }
-
-        private static DeletionResult success(
-                List<String> messages)
-        {
-            return new DeletionResult(
-                    true,
-                    messages
-            );
-        }
-
-        private static DeletionResult failure(
-                List<String> messages)
-        {
-            return new DeletionResult(
-                    false,
-                    messages
-            );
-        }
-    }
-
-    private record DeletionPlan(
-            List<Path> files,
-            List<SoundElement> sounds)
-    {
-    }
-
-    private record StagedFile(
-            Path originalPath,
-            Path stagedPath)
-    {
     }
 }
