@@ -83,3 +83,9 @@ Moving a resource back to the main resource category places it in the root folde
 - *Moving resources that are used by different mod elements in another folder* - **Safe**
 
 - *Deleting a folder that contains resources* - **NOT safe! That would delete all the resources inside that folder, and of course if some mod elements were using them they would display an error**
+
+<br>
+
+<div align="center">
+    <b>&copy; bo bo - 2026</b>
+</div>
