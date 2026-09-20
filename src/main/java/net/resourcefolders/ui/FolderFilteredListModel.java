@@ -5,6 +5,7 @@ import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Predicate;
 
 public final class FolderFilteredListModel<T>
@@ -43,9 +44,14 @@ public final class FolderFilteredListModel<T>
 
     public void refresh()
     {
-        var oldSize = visibleItems.size();
+        refresh(false);
+    }
 
-        visibleItems.clear();
+    private void refresh(
+            boolean notifyUnchangedContents)
+    {
+        var newVisibleItems =
+                new ArrayList<T>();
 
         for (int i = 0; i < sourceModel.getSize(); i++)
         {
@@ -53,27 +59,149 @@ public final class FolderFilteredListModel<T>
 
             if (item != null && filter.test(item))
             {
-                visibleItems.add(item);
+                newVisibleItems.add(item);
             }
         }
 
-        var newSize = visibleItems.size();
+        var oldSize = visibleItems.size();
+        var newSize = newVisibleItems.size();
 
-        if (oldSize > 0)
+        int commonPrefixLength = 0;
+        int maximumCommonLength =
+                Math.min(
+                        oldSize,
+                        newSize
+                );
+
+        while (commonPrefixLength
+                < maximumCommonLength
+                && visibleItems.get(
+                        commonPrefixLength)
+                == newVisibleItems.get(
+                        commonPrefixLength))
         {
+            commonPrefixLength++;
+        }
+
+        if (oldSize == newSize
+                && commonPrefixLength == oldSize)
+        {
+            if (notifyUnchangedContents
+                    && oldSize > 0)
+            {
+                fireContentsChanged(
+                        this,
+                        0,
+                        oldSize - 1
+                );
+            }
+
+            return;
+        }
+
+        int commonSuffixLength = 0;
+
+        while (commonSuffixLength
+                < maximumCommonLength
+                - commonPrefixLength
+                && visibleItems.get(
+                        oldSize
+                                - commonSuffixLength
+                                - 1)
+                == newVisibleItems.get(
+                        newSize
+                                - commonSuffixLength
+                                - 1))
+        {
+            commonSuffixLength++;
+        }
+
+        int removedCount =
+                oldSize
+                        - commonPrefixLength
+                        - commonSuffixLength;
+
+        int addedCount =
+                newSize
+                        - commonPrefixLength
+                        - commonSuffixLength;
+
+        boolean replacementsEquivalent =
+                removedCount == addedCount;
+
+        for (int i = 0;
+             replacementsEquivalent
+                     && i < addedCount;
+             i++)
+        {
+            replacementsEquivalent =
+                    Objects.equals(
+                            visibleItems.get(
+                                    commonPrefixLength + i),
+                            newVisibleItems.get(
+                                    commonPrefixLength + i
+                            )
+                    );
+        }
+
+        if (replacementsEquivalent)
+        {
+            for (int i = 0;
+                 i < addedCount;
+                 i++)
+            {
+                visibleItems.set(
+                        commonPrefixLength + i,
+                        newVisibleItems.get(
+                                commonPrefixLength + i
+                        )
+                );
+            }
+
+            fireContentsChanged(
+                    this,
+                    commonPrefixLength,
+                    commonPrefixLength
+                            + addedCount - 1
+            );
+
+            return;
+        }
+
+        if (removedCount > 0)
+        {
+            visibleItems
+                    .subList(
+                            commonPrefixLength,
+                            commonPrefixLength
+                                    + removedCount
+                    )
+                    .clear();
+
             fireIntervalRemoved(
                     this,
-                    0,
-                    oldSize - 1
+                    commonPrefixLength,
+                    commonPrefixLength
+                            + removedCount - 1
             );
         }
 
-        if (newSize > 0)
+        if (addedCount > 0)
         {
+            visibleItems.addAll(
+                    commonPrefixLength,
+                    newVisibleItems.subList(
+                            commonPrefixLength,
+                            commonPrefixLength
+                                    + addedCount
+                    )
+            );
+
             fireIntervalAdded(
                     this,
-                    0,
-                    newSize - 1
+                    commonPrefixLength,
+                    commonPrefixLength
+                            + addedCount - 1
             );
         }
     }
@@ -93,6 +221,6 @@ public final class FolderFilteredListModel<T>
     @Override
     public void contentsChanged(ListDataEvent event)
     {
-        refresh();
+        refresh(true);
     }
 }

@@ -2,6 +2,7 @@ package net.resourcefolders.ui;
 
 import net.mcreator.ui.variants.modmaker.ModMaker;
 import net.mcreator.ui.workspace.IReloadableFilterable;
+import net.mcreator.ui.workspace.resources.ResourceFilterModel;
 import net.mcreator.ui.workspace.resources.TextureType;
 import net.mcreator.workspace.resources.Animation;
 import net.mcreator.workspace.resources.Model;
@@ -19,6 +20,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class ResourceFoldersInstaller
 {
@@ -70,6 +72,7 @@ public final class ResourceFoldersInstaller
                 );
 
         int installedSections = 0;
+        int recognizedSections = 0;
 
         for (int i = 0;
              i < resourceTabs.getTabCount();
@@ -96,15 +99,27 @@ public final class ResourceFoldersInstaller
                 continue;
             }
 
-            installIntoResourcePanel(
+            recognizedSections++;
+
+            if (installIntoResourcePanel(
                     mcreator,
                     resourceTabs,
                     panel,
                     section,
                     folderManager
+            ))
+            {
+                installedSections++;
+            }
+        }
+
+        if (installedSections == 0)
+        {
+            LOG.error(
+                    "Resource Folders: no compatible resource sections were installed"
             );
 
-            installedSections++;
+            return;
         }
 
         resourcesPanel.putClientProperty(
@@ -113,15 +128,16 @@ public final class ResourceFoldersInstaller
         );
 
         LOG.info(
-                "Resource Folders: installed into {} resource sections",
-                installedSections
+                "Resource Folders: installed into {} of {} recognized resource sections",
+                installedSections,
+                recognizedSections
         );
 
         resourcesPanel.revalidate();
         resourcesPanel.repaint();
     }
 
-    private static void installIntoResourcePanel(
+    private static boolean installIntoResourcePanel(
             ModMaker mcreator,
             JTabbedPane resourceTabs,
             JPanel resourcePanel,
@@ -138,7 +154,7 @@ public final class ResourceFoldersInstaller
                             .getName()
             );
 
-            return;
+            return false;
         }
 
         if (!(resourcePanel
@@ -152,7 +168,7 @@ public final class ResourceFoldersInstaller
                             .getName()
             );
 
-            return;
+            return false;
         }
 
         var resourceLists =
@@ -160,8 +176,23 @@ public final class ResourceFoldersInstaller
                         resourcePanel
                 );
 
+        if (resourceLists.isEmpty())
+        {
+            LOG.warn(
+                    "Resource Folders: {} has no compatible resource lists",
+                    resourcePanel
+                            .getClass()
+                            .getName()
+            );
+
+            return false;
+        }
+
         var resourceModels =
                 new ArrayList<ListModel<?>>();
+
+        var importTrackerReference =
+                new AtomicReference<ResourceImportTracker>();
 
         Runnable reloadSection = () ->
         {
@@ -174,6 +205,34 @@ public final class ResourceFoldersInstaller
             {
                 SwingUtilities.invokeLater(
                         reloadable::reloadElements
+                );
+            }
+        };
+
+        Runnable refilterSection = () ->
+        {
+            Runnable refilter = () ->
+            {
+                reloadable.refilterElements();
+
+                var importTracker =
+                        importTrackerReference.get();
+
+                if (importTracker != null)
+                {
+                    importTracker.cancelPendingCheck();
+                }
+            };
+
+            if (SwingUtilities
+                    .isEventDispatchThread())
+            {
+                refilter.run();
+            }
+            else
+            {
+                SwingUtilities.invokeLater(
+                        refilter
                 );
             }
         };
@@ -198,7 +257,7 @@ public final class ResourceFoldersInstaller
                 );
 
         folderPanel.installAssetDropTarget(
-                reloadSection
+                refilterSection
         );
 
         var header =
@@ -264,7 +323,7 @@ public final class ResourceFoldersInstaller
                     folderPanel,
                     folderManager,
                     section,
-                    reloadSection,
+                    refilterSection,
                     resourceModels
             );
         }
@@ -276,7 +335,7 @@ public final class ResourceFoldersInstaller
                     folderPanel,
                     folderManager,
                     section,
-                    reloadSection,
+                    refilterSection,
                     resourceModels
             );
         }
@@ -300,8 +359,12 @@ public final class ResourceFoldersInstaller
                                         && resourceTabs
                                         .getSelectedComponent()
                                         == resourcePanel,
-                        reloadSection
+                        refilterSection
                 );
+
+        importTrackerReference.set(
+                importTracker
+        );
 
         resourcePanel.putClientProperty(
                 "resourceFolders.importTracker",
@@ -314,6 +377,10 @@ public final class ResourceFoldersInstaller
         );
 
         folderPanel.addFolderChangedListener(_ ->
+                refilterSection.run()
+        );
+
+        folderPanel.addResourcesChangedListener(() ->
         {
             reloadSection.run();
             importTracker.resetBaseline();
@@ -326,6 +393,8 @@ public final class ResourceFoldersInstaller
                 "Resource Folders: installed {} section",
                 section.getDisplayName()
         );
+
+        return true;
     }
 
     @SuppressWarnings("unchecked")
@@ -335,7 +404,7 @@ public final class ResourceFoldersInstaller
             ResourceFolderPanel folderPanel,
             ResourceFolderManager folderManager,
             ResourceSection section,
-            Runnable reloadSection,
+            Runnable refilterSection,
             Collection<ListModel<?>> resourceModels)
     {
         for (var resourceList :
@@ -379,7 +448,7 @@ public final class ResourceFoldersInstaller
                     mcreator.getWorkspace(),
                     folderManager,
                     section,
-                    reloadSection
+                    refilterSection
             );
         }
     }
@@ -391,7 +460,7 @@ public final class ResourceFoldersInstaller
             ResourceFolderPanel folderPanel,
             ResourceFolderManager folderManager,
             ResourceSection section,
-            Runnable reloadSection,
+            Runnable refilterSection,
             Collection<ListModel<?>> resourceModels)
     {
         for (var resourceList :
@@ -435,7 +504,7 @@ public final class ResourceFoldersInstaller
                     mcreator.getWorkspace(),
                     folderManager,
                     section,
-                    reloadSection
+                    refilterSection
             );
         }
     }
@@ -576,7 +645,9 @@ public final class ResourceFoldersInstaller
                 container.getComponents())
         {
             if (component
-                    instanceof JList<?> list)
+                    instanceof JList<?> list
+                    && list.getModel()
+                    instanceof ResourceFilterModel<?>)
             {
                 lists.add(
                         list

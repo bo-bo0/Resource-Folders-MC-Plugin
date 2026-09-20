@@ -137,6 +137,24 @@ public final class ResourceImportTracker
         replaceKnownResources();
     }
 
+    public void cancelPendingCheck()
+    {
+        if (!SwingUtilities
+                .isEventDispatchThread())
+        {
+            SwingUtilities.invokeLater(
+                    this::cancelPendingCheck
+            );
+
+            return;
+        }
+
+        if (!disposed)
+        {
+            changeDebounceTimer.stop();
+        }
+    }
+
     public void sectionActivityChanged()
     {
         updateSectionActivity();

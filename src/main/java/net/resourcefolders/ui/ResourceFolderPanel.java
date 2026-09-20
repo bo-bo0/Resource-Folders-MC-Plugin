@@ -69,6 +69,10 @@ public final class ResourceFolderPanel
             folderChangedListeners =
             new ArrayList<>();
 
+    private final List<Runnable>
+            resourcesChangedListeners =
+            new ArrayList<>();
+
     private String currentFolderId =
             ResourceFolderData.ROOT_ID;
 
@@ -201,6 +205,14 @@ public final class ResourceFolderPanel
             Consumer<String> listener)
     {
         folderChangedListeners.add(
+                listener
+        );
+    }
+
+    public void addResourcesChangedListener(
+            Runnable listener)
+    {
+        resourcesChangedListeners.add(
                 listener
         );
     }
@@ -610,7 +622,7 @@ public final class ResourceFolderPanel
                     JOptionPane.ERROR_MESSAGE
             );
 
-            notifyFolderChanged();
+            notifyResourcesChanged();
 
             return;
         }
@@ -622,7 +634,7 @@ public final class ResourceFolderPanel
 
         refresh();
 
-        notifyFolderChanged();
+        notifyResourcesChanged();
 
         if (!deletionResult.messages().isEmpty())
         {
@@ -853,6 +865,15 @@ public final class ResourceFolderPanel
             listener.accept(
                     currentFolderId
             );
+        }
+    }
+
+    private void notifyResourcesChanged()
+    {
+        for (var listener :
+                resourcesChangedListeners)
+        {
+            listener.run();
         }
     }
 

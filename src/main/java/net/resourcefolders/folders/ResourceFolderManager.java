@@ -4,9 +4,13 @@ import com.google.gson.Gson;
 import net.mcreator.workspace.Workspace;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.Set;
 
 public final class ResourceFolderManager
@@ -18,6 +22,9 @@ public final class ResourceFolderManager
             new Gson();
 
     private final Workspace workspace;
+
+    private final Map<String, SectionIndex> sectionIndexes =
+            new HashMap<>();
 
     private ResourceFolderData data;
 
@@ -31,22 +38,12 @@ public final class ResourceFolderManager
             String sectionId,
             String parentId)
     {
-        return getSection(sectionId)
-                .getFolders()
-                .stream()
-                .filter(folder ->
-                        Objects.equals(
-                                folder.getParentId(),
-                                parentId
-                        )
-                )
-                .sorted((a, b) ->
-                        a.getName()
-                                .compareToIgnoreCase(
-                                        b.getName()
-                                )
-                )
-                .toList();
+        return getSectionIndex(sectionId)
+                .childrenByParentId()
+                .getOrDefault(
+                        parentId,
+                        List.of()
+                );
     }
 
     public ResourceFolder getFolder(
@@ -58,14 +55,9 @@ public final class ResourceFolderManager
             return null;
         }
 
-        return getSection(sectionId)
-                .getFolders()
-                .stream()
-                .filter(folder ->
-                        folder.getId().equals(folderId)
-                )
-                .findFirst()
-                .orElse(null);
+        return getSectionIndex(sectionId)
+                .foldersById()
+                .get(folderId);
     }
 
     public ResourceFolder createFolder(
@@ -82,6 +74,8 @@ public final class ResourceFolderManager
         getSection(sectionId)
                 .getFolders()
                 .add(folder);
+
+        invalidateSectionIndex(sectionId);
 
         save();
 
@@ -105,6 +99,8 @@ public final class ResourceFolderManager
         }
 
         folder.setName(newName);
+
+        invalidateSectionIndex(sectionId);
 
         save();
     }
@@ -262,17 +258,13 @@ public final class ResourceFolderManager
             }
 
             for (var folder :
-                    getSection(sectionId)
-                            .getFolders())
+                    getChildren(
+                            sectionId,
+                            currentId))
             {
-                if (Objects.equals(
-                        folder.getParentId(),
-                        currentId))
-                {
-                    pending.addLast(
-                            folder.getId()
-                    );
-                }
+                pending.addLast(
+                        folder.getId()
+                );
             }
         }
 
@@ -359,7 +351,27 @@ public final class ResourceFolderManager
                         )
                 );
 
+        invalidateSectionIndex(sectionId);
+
         save();
+    }
+
+    private SectionIndex getSectionIndex(
+            String sectionId)
+    {
+        return sectionIndexes.computeIfAbsent(
+                sectionId,
+                _ ->
+                        SectionIndex.create(
+                                getSection(sectionId)
+                        )
+        );
+    }
+
+    private void invalidateSectionIndex(
+            String sectionId)
+    {
+        sectionIndexes.remove(sectionId);
     }
 
     private ResourceSectionData getSection(
@@ -413,5 +425,70 @@ public final class ResourceFolderManager
         );
 
         workspace.markDirty();
+    }
+
+    private record SectionIndex(
+            Map<String, ResourceFolder> foldersById,
+            Map<String, List<ResourceFolder>> childrenByParentId)
+    {
+        private static final Comparator<ResourceFolder>
+                FOLDER_NAME_COMPARATOR =
+                Comparator.comparing(
+                        ResourceFolder::getName,
+                        String.CASE_INSENSITIVE_ORDER
+                );
+
+        private static SectionIndex create(
+                ResourceSectionData section)
+        {
+            var foldersById =
+                    new HashMap<String, ResourceFolder>();
+
+            var mutableChildrenByParentId =
+                    new HashMap<String, List<ResourceFolder>>();
+
+            for (var folder : section.getFolders())
+            {
+                foldersById.putIfAbsent(
+                        folder.getId(),
+                        folder
+                );
+
+                mutableChildrenByParentId
+                        .computeIfAbsent(
+                                folder.getParentId(),
+                                _ ->
+                                        new ArrayList<>()
+                        )
+                        .add(folder);
+            }
+
+            var childrenByParentId =
+                    new HashMap<String, List<ResourceFolder>>();
+
+            for (var entry :
+                    mutableChildrenByParentId.entrySet())
+            {
+                entry.getValue().sort(
+                        FOLDER_NAME_COMPARATOR
+                );
+
+                childrenByParentId.put(
+                        entry.getKey(),
+                        List.copyOf(
+                                entry.getValue()
+                        )
+                );
+            }
+
+            return new SectionIndex(
+                    Collections.unmodifiableMap(
+                            foldersById
+                    ),
+                    Collections.unmodifiableMap(
+                            childrenByParentId
+                    )
+            );
+        }
     }
 }
