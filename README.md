@@ -82,7 +82,9 @@ Moving a resource back to the main resource category places it in the root folde
 
 - *Moving resources that are used by different mod elements in another folder* - **Safe**
 
-- *Deleting a folder that contains resources* - **NOT safe! That would delete all the resources inside that folder, and of course if some mod elements were using them they would display an error**
+- *Removing the plugin from MCreator after having already used it to organize a workspace's resources* - **Safe** (but will make me a little sad)
+
+- *Deleting a folder that contains resources* - **NOT safe! That would delete all the resources inside that folder, and of course if some mod elements were using them they would display an error, so be cautious**
 
 <br>
 
