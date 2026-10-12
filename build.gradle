@@ -49,15 +49,22 @@ project(":MCreator").afterEvaluate
                                 }
         }
 
+tasks.register("prepareDevPlugin", Sync)
+        {
+            dependsOn tasks.jar
+            from(tasks.named("jar"))
+            into(layout.buildDirectory.dir("dev-plugin"))
+        }
+
 tasks.register("runM", JavaExec)
         {
             group = "application"
             description = "Runs MCreator with the development plugin loaded"
 
-            dependsOn tasks.jar
+            dependsOn tasks.named("prepareDevPlugin")
 
             def pluginOutputDirectory = layout.buildDirectory
-                    .dir("libs")
+                    .dir("dev-plugin")
                     .get()
                     .asFile
                     .absolutePath

@@ -38,6 +38,12 @@ public enum ResourceSection
             "screenshots",
             "Screenshots",
             "WorkspacePanelScreenshots"
+    ),
+
+    TAGS(
+            "tags",
+            "Element Tags",
+            "WorkspacePanelTags"
     );
 
     private final String id;

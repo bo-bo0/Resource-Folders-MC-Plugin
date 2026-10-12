@@ -1,6 +1,7 @@
 package net.resourcefolders.ui.dnd;
 
 import net.mcreator.workspace.Workspace;
+import net.resourcefolders.ui.TagTableKey;
 import net.resourcefolders.resources.ResourceKey;
 import net.resourcefolders.resources.ResourceSection;
 
@@ -34,28 +35,27 @@ public final class ResourceAssetTransferHandler
     protected Transferable createTransferable(
             JComponent component)
     {
-        if (!(component instanceof JList<?> list))
-        {
-            return null;
-        }
-
         var resourceKeys =
                 new ArrayList<String>();
 
-        for (var resource :
-                list.getSelectedValuesList())
+        if (component instanceof JTable table && section == ResourceSection.TAGS)
         {
-            try
+            for (int row : table.getSelectedRows())
             {
-                resourceKeys.add(
-                        ResourceKey.of(
-                                resource,
-                                workspace
-                        )
-                );
+                resourceKeys.add(TagTableKey.fromViewRow(table, row));
             }
-            catch (IllegalArgumentException ignored)
+        }
+        else if (component instanceof JList<?> list)
+        {
+            for (var resource : list.getSelectedValuesList())
             {
+                try
+                {
+                    resourceKeys.add(ResourceKey.of(resource, workspace));
+                }
+                catch (IllegalArgumentException ignored)
+                {
+                }
             }
         }
 

@@ -5,12 +5,15 @@ import net.mcreator.ui.init.L10N;
 import net.mcreator.ui.init.UIRES;
 import net.mcreator.ui.variants.modmaker.ModMaker;
 import net.mcreator.workspace.elements.ModElement;
+import net.mcreator.workspace.elements.TagElement;
+import net.mcreator.minecraft.TagType;
 import net.resourcefolders.folders.ResourceFolder;
 import net.resourcefolders.folders.ResourceFolderData;
 import net.resourcefolders.folders.ResourceFolderManager;
 import net.resourcefolders.resources.deletion.ResourceFolderContentDeleter;
 import net.resourcefolders.resources.ResourceFolderUsageFinder;
 import net.resourcefolders.resources.ResourceSection;
+import net.resourcefolders.resources.ResourceKey;
 import net.resourcefolders.ui.dnd.ResourceFolderTransferHandler;
 import org.apache.commons.text.StringEscapeUtils;
 
@@ -276,7 +279,7 @@ public final class ResourceFolderPanel
         );
 
         addFolderButton.setToolTipText(
-                "Create resource folder"
+                section == ResourceSection.TAGS ? "Create tag folder" : "Create resource folder"
         );
 
         upFolderButton.setToolTipText(
@@ -452,7 +455,7 @@ public final class ResourceFolderPanel
                 JOptionPane.showInputDialog(
                         mcreator,
                         "Folder name:",
-                        "Create Resource Folder",
+                        section == ResourceSection.TAGS ? "Create Tag Folder" : "Create Resource Folder",
                         JOptionPane.PLAIN_MESSAGE
                 );
 
@@ -511,7 +514,7 @@ public final class ResourceFolderPanel
                 JOptionPane.showInputDialog(
                         mcreator,
                         "Folder name:",
-                        "Rename Resource Folder",
+                        section == ResourceSection.TAGS ? "Rename Tag Folder" : "Rename Resource Folder",
                         JOptionPane.PLAIN_MESSAGE,
                         null,
                         null,
@@ -597,6 +600,12 @@ public final class ResourceFolderPanel
                         folderTreeSize - 1
                 );
 
+        if (section == ResourceSection.TAGS)
+        {
+            deleteTagFolder(folder, resourceKeys, nestedFolderCount);
+            return;
+        }
+
         if (!confirmFolderDeletion(
                 folder,
                 resourceKeys,
@@ -645,6 +654,53 @@ public final class ResourceFolderPanel
                     JOptionPane.WARNING_MESSAGE
             );
         }
+    }
+
+    private void deleteTagFolder(ResourceFolder folder, Set<String> tagKeys, int nestedFolderCount)
+    {
+        var workspace = mcreator.getWorkspace();
+        var tags = new ArrayList<TagElement>();
+
+        for (var tag : workspace.getTagElements().keySet())
+        {
+            if (tagKeys.contains(ResourceKey.of(tag, workspace)))
+            {
+                tags.add(tag);
+            }
+        }
+
+        for (var tag : tags)
+        {
+            if (tag.type() == TagType.PAINTING_VARIANTS
+                    || tag.type() == TagType.BANNER_PATTERNS
+                    || tag.type() == TagType.POINTS_OF_INTEREST
+                    || workspace.getTagElements().get(tag).stream().anyMatch(TagElement.Entry::isManaged))
+            {
+                JOptionPane.showMessageDialog(mcreator,
+                        "This folder contains a read-only or managed tag. Remove those tags from the folder before deleting it.",
+                        "Cannot Delete Tag Folder", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        }
+
+        var message = "Delete folder \"" + folder.getName() + "\" and its "
+                + nestedFolderCount + " subfolder(s) and " + tags.size()
+                + " tag(s)? This also deletes the tags from the workspace and cannot be undone.";
+
+        if (JOptionPane.showConfirmDialog(mcreator, message, "Delete Tag Folder",
+                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION)
+        {
+            return;
+        }
+
+        for (var tag : tags)
+        {
+            workspace.removeTagElement(tag);
+        }
+
+        folderManager.deleteFolderTree(section.getId(), folder.getId());
+        refresh();
+        notifyResourcesChanged();
     }
 
     private void showDeletionMessages(
@@ -771,6 +827,8 @@ public final class ResourceFolderPanel
 
             case SCREENSHOTS ->
                     "screenshot";
+
+            case TAGS -> "tag";
         };
     }
 

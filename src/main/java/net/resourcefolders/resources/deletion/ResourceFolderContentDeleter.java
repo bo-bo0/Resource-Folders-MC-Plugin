@@ -232,6 +232,9 @@ public final class ResourceFolderContentDeleter
                             resourceKeys,
                             files
                     );
+
+            case TAGS ->
+                    throw new IllegalArgumentException("Tag deletion must use the workspace tag API");
         }
 
         return new DeletionPlan(

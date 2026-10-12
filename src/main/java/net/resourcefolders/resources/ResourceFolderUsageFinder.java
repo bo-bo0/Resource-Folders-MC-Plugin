@@ -156,6 +156,10 @@ public final class ResourceFolderUsageFinder
             case SCREENSHOTS ->
             {
             }
+
+            case TAGS ->
+            {
+            }
         }
 
         return references;

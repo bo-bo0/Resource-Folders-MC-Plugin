@@ -37,7 +37,8 @@ public final class ResourceFoldersInstaller
     }
 
     public static void install(
-            ModMaker mcreator)
+            ModMaker mcreator,
+            ResourceFolderManager folderManager)
     {
         var workspacePanel =
                 mcreator.getWorkspacePanel();
@@ -65,11 +66,6 @@ public final class ResourceFoldersInstaller
 
             return;
         }
-
-        var folderManager =
-                new ResourceFolderManager(
-                        mcreator.getWorkspace()
-                );
 
         int installedSections = 0;
         int recognizedSections = 0;
@@ -616,6 +612,9 @@ public final class ResourceFoldersInstaller
                         ? List.of(screenshots)
                         : List.of();
             }
+
+            case TAGS ->
+                    mcreator.getWorkspace().getTagElements().keySet();
         };
     }
 

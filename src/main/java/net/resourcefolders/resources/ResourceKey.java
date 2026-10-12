@@ -1,6 +1,7 @@
 package net.resourcefolders.resources;
 
 import net.mcreator.workspace.Workspace;
+import net.mcreator.workspace.elements.TagElement;
 import net.mcreator.workspace.elements.SoundElement;
 import net.mcreator.workspace.resources.Animation;
 import net.mcreator.workspace.resources.Model;
@@ -17,6 +18,10 @@ public final class ResourceKey
             Object resource,
             Workspace workspace)
     {
+        if (resource instanceof TagElement tag)
+        {
+            return ofTag(tag);
+        }
         if (resource instanceof File file)
         {
             return "file:" + getFileKey(file, workspace);
@@ -60,6 +65,12 @@ public final class ResourceKey
                 "Unsupported resource type: "
                         + resource.getClass().getName()
         );
+    }
+
+    public static String ofTag(TagElement tag)
+    {
+        return "tag:" + tag.type().name() + ":"
+                + tag.getMCreatorNamespace() + ":" + tag.getName();
     }
 
     private static String getFileKey(
