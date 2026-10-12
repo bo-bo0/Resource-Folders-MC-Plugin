@@ -24,6 +24,10 @@ final class TagMoveMenuInstaller
             @Override
             public void mousePressed(MouseEvent event)
             {
+                if (SwingUtilities.isRightMouseButton(event))
+                {
+                    TagTableEditing.cancelBeforeFolderChange(table);
+                }
                 showPopup(event);
             }
 
@@ -40,15 +44,14 @@ final class TagMoveMenuInstaller
                     return;
                 }
 
+                TagTableEditing.cancelBeforeFolderChange(table);
+
                 int row = table.rowAtPoint(event.getPoint());
                 if (row < 0)
                 {
                     return;
                 }
-                if (!table.isRowSelected(row))
-                {
-                    table.setRowSelectionInterval(row, row);
-                }
+                table.changeSelection(row, 0, false, false);
 
                 var popup = new JPopupMenu();
                 var moveMenu = new JMenu("Move to folder");
@@ -99,6 +102,7 @@ final class TagMoveMenuInstaller
         var item = new JMenuItem(label);
         item.addActionListener(_ ->
         {
+            TagTableEditing.cancelBeforeFolderChange(table);
             var keys = new ArrayList<String>();
             for (int row : table.getSelectedRows())
             {

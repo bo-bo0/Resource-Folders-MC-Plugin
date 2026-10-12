@@ -2,6 +2,7 @@ package net.resourcefolders.ui.dnd;
 
 import net.mcreator.workspace.Workspace;
 import net.resourcefolders.ui.TagTableKey;
+import net.resourcefolders.ui.TagTableEditing;
 import net.resourcefolders.resources.ResourceKey;
 import net.resourcefolders.resources.ResourceSection;
 
@@ -40,6 +41,7 @@ public final class ResourceAssetTransferHandler
 
         if (component instanceof JTable table && section == ResourceSection.TAGS)
         {
+            TagTableEditing.cancelBeforeFolderChange(table);
             for (int row : table.getSelectedRows())
             {
                 resourceKeys.add(TagTableKey.fromViewRow(table, row));
