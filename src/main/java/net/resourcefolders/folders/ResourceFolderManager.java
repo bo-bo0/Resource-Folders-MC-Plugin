@@ -223,6 +223,26 @@ public final class ResourceFolderManager
         }
     }
 
+    public void renameResourceKey(String sectionId, String oldKey, String newKey)
+    {
+        if (oldKey.equals(newKey))
+        {
+            return;
+        }
+
+        var mappings = getSection(sectionId).getResourceFolders();
+        var folderId = mappings.remove(oldKey);
+        var previousTargetFolderId = mappings.remove(newKey);
+        if (folderId != null)
+        {
+            mappings.put(newKey, folderId);
+        }
+        if (folderId != null || previousTargetFolderId != null)
+        {
+            save();
+        }
+    }
+
     public Set<String> getFolderTreeIds(
             String sectionId,
             String folderId)

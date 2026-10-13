@@ -2,7 +2,8 @@ package net.resourcefolders.ui.dnd;
 
 import net.mcreator.workspace.Workspace;
 import net.resourcefolders.ui.TagTableKey;
-import net.resourcefolders.ui.TagTableEditing;
+import net.resourcefolders.ui.FolderTableEditing;
+import net.resourcefolders.ui.VariableTableKey;
 import net.resourcefolders.resources.ResourceKey;
 import net.resourcefolders.resources.ResourceSection;
 
@@ -39,12 +40,15 @@ public final class ResourceAssetTransferHandler
         var resourceKeys =
                 new ArrayList<String>();
 
-        if (component instanceof JTable table && section == ResourceSection.TAGS)
+        if (component instanceof JTable table
+                && (section == ResourceSection.TAGS || section == ResourceSection.VARIABLES))
         {
-            TagTableEditing.cancelBeforeFolderChange(table);
+            FolderTableEditing.finishBeforeFolderChange(table, section);
             for (int row : table.getSelectedRows())
             {
-                resourceKeys.add(TagTableKey.fromViewRow(table, row));
+                resourceKeys.add(section == ResourceSection.TAGS
+                        ? TagTableKey.fromViewRow(table, row)
+                        : VariableTableKey.fromViewRow(table, row));
             }
         }
         else if (component instanceof JList<?> list)

@@ -6,9 +6,9 @@
 
 <b>Supported MCreator versions</b>: <code>2026.2</code>
 
-Resource Folders is a MCreator plugin that adds folders to the **Resources** tab, making it much easier to organize large projects.
+Resource Folders is a MCreator plugin that adds folders to the **Resources**, **Element Tags**, and **Variables** tabs, making it much easier to organize large projects.
 
-Instead of having every texture, model, sound, animation, structure, or screenshot displayed in one long list, you can organize your resources into folders and subfolders directly inside MCreator.
+Instead of having every texture, model, sound, animation, structure, or screenshot displayed in one long list, you can organize resources, tags, and variables into folders and subfolders directly inside MCreator.
 
 It's completely safe to start using this plugin in already existing workspaces, even to organize resources that are already used by different mod elements.
 
@@ -18,7 +18,7 @@ It's completely safe to start using this plugin in already existing workspaces, 
 
 ### Organize every resource category
 
-Each resource category has its own independent folder structure.
+Each resource category, Element Tags, and Variables has its own independent folder structure.
 
 For example, a `Bosses` folder inside **Textures** is completely separate from a `Bosses` folder inside **Sounds**.
 
@@ -66,6 +66,8 @@ If you import a new texture there, it will immediately be organized inside Bosse
 
 No need to import it first and move it afterward.
 
+New tags and variables created while viewing one of their folders are placed there automatically.
+
 ### Move resources between folders
 
 Resources can be moved at any time by right-clicking on them and using the <code>Move to folder</code> option or by simply dragging and dropping them into their new location.
@@ -73,6 +75,8 @@ Resources can be moved at any time by right-clicking on them and using the <code
 You can also select multiple resources and move them together.
 
 Moving a resource back to the main resource category places it in the root folder again.
+
+Tags and variables can also be moved with the context menu or drag and drop. Moving them changes only their folder assignment: tag entries and variable names, types, scopes, and initial values are preserved. Renaming a variable keeps its folder assignment.
 
 ### What things are safe to do?
 
@@ -82,9 +86,11 @@ Moving a resource back to the main resource category places it in the root folde
 
 - *Moving resources that are used by different mod elements in another folder* - **Safe**
 
+- *Moving tags or variables to another folder* - **Safe; their contents and settings are preserved**
+
 - *Removing the plugin from MCreator after having already used it to organize a workspace's resources* - **Safe** (but will make me a little sad)
 
-- *Deleting a folder that contains resources* - **NOT safe! That would delete all the resources inside that folder, and of course if some mod elements were using them they would display an error, so be cautious**
+- *Deleting a folder that contains resources, tags, or variables* - **Deletes its contents from the workspace after confirmation. Check usage warnings before confirming.**
 
 <br>
 

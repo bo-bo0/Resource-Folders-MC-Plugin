@@ -2,6 +2,7 @@ package net.resourcefolders.resources;
 
 import net.mcreator.workspace.Workspace;
 import net.mcreator.workspace.elements.TagElement;
+import net.mcreator.workspace.elements.VariableElement;
 import net.mcreator.workspace.elements.SoundElement;
 import net.mcreator.workspace.resources.Animation;
 import net.mcreator.workspace.resources.Model;
@@ -21,6 +22,10 @@ public final class ResourceKey
         if (resource instanceof TagElement tag)
         {
             return ofTag(tag);
+        }
+        if (resource instanceof VariableElement variable)
+        {
+            return ofVariable(variable.getName());
         }
         if (resource instanceof File file)
         {
@@ -71,6 +76,11 @@ public final class ResourceKey
     {
         return "tag:" + tag.type().name() + ":"
                 + tag.getMCreatorNamespace() + ":" + tag.getName();
+    }
+
+    public static String ofVariable(String name)
+    {
+        return "variable:" + name;
     }
 
     private static String getFileKey(

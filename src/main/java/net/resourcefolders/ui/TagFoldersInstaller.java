@@ -9,11 +9,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
-import javax.swing.event.RowSorterEvent;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
-import java.util.List;
 
 public final class TagFoldersInstaller
 {
@@ -46,7 +44,10 @@ public final class TagFoldersInstaller
 
         var sorter = (TableRowSorter<TableModel>) table.getRowSorter();
         var folderPanel = new ResourceFolderPanel(mcreator, folderManager, ResourceSection.TAGS);
-        var filter = new TagFolderFilter(sorter, table, folderPanel, folderManager);
+        folderPanel.setBeforeContentsChange(() ->
+                FolderTableEditing.finishBeforeFolderChange(table, ResourceSection.TAGS));
+        var filter = new TableFolderFilter(sorter, table, folderPanel::getCurrentFolderId, folderManager,
+                ResourceSection.TAGS, TagTableKey::fromModelRow);
         filter.install();
 
         var originalNorth = ((BorderLayout) tagsPanel.getLayout()).getLayoutComponent(BorderLayout.NORTH);
@@ -68,14 +69,15 @@ public final class TagFoldersInstaller
         table.setTransferHandler(new ResourceAssetTransferHandler(
                 mcreator.getWorkspace(), ResourceSection.TAGS));
         table.setDragEnabled(true);
-        TagMoveMenuInstaller.install(table, folderManager, filter::refresh);
+        TableMoveMenuInstaller.install(table, folderManager, ResourceSection.TAGS,
+                row -> TagTableKey.fromViewRow(table, row), filter::refresh);
 
         var tracker = new TagImportTracker(mcreator.getWorkspace(), folderManager,
                 folderPanel, tagsPanel, table.getModel(), filter::refresh);
         folderPanel.addFolderChangedListener(_ -> filter.refresh());
         folderPanel.addResourcesChangedListener(() ->
         {
-            TagTableEditing.cancelBeforeFolderChange(table);
+            FolderTableEditing.cancelBeforeFolderChange(table);
             tagsPanel.reloadElements();
             tracker.resetBaseline();
             filter.refresh();
@@ -107,58 +109,4 @@ public final class TagFoldersInstaller
         return null;
     }
 
-    private static final class TagFolderFilter
-    {
-        private final TableRowSorter<TableModel> sorter;
-        private final JTable table;
-        private final ResourceFolderPanel folderPanel;
-        private final ResourceFolderManager folderManager;
-        private RowFilter<? super TableModel, ? super Integer> appliedFilter;
-        private RowFilter<? super TableModel, ? super Integer> searchFilter;
-
-        private TagFolderFilter(TableRowSorter<TableModel> sorter, JTable table,
-                ResourceFolderPanel folderPanel, ResourceFolderManager folderManager)
-        {
-            this.sorter = sorter;
-            this.table = table;
-            this.folderPanel = folderPanel;
-            this.folderManager = folderManager;
-        }
-
-        private void install()
-        {
-            searchFilter = sorter.getRowFilter();
-            sorter.addRowSorterListener(event ->
-            {
-                if (event.getType() == RowSorterEvent.Type.SORTED
-                        && sorter.getRowFilter() != appliedFilter)
-                {
-                    searchFilter = sorter.getRowFilter();
-                    refresh();
-                }
-            });
-            refresh();
-        }
-
-        private void refresh()
-        {
-            TagTableEditing.cancelBeforeFolderChange(table);
-
-            RowFilter<TableModel, Integer> folderFilter = new RowFilter<>()
-            {
-                @Override
-                public boolean include(Entry<? extends TableModel, ? extends Integer> entry)
-                {
-                    var key = TagTableKey.fromModelRow(entry.getModel(), entry.getIdentifier());
-                    return folderPanel.getCurrentFolderId().equals(
-                            folderManager.getResourceFolder(ResourceSection.TAGS.getId(), key));
-                }
-            };
-
-            RowFilter<? super TableModel, ? super Integer> combined = searchFilter == null
-                    ? folderFilter : RowFilter.andFilter(List.of(searchFilter, folderFilter));
-            appliedFilter = combined;
-            sorter.setRowFilter(combined);
-        }
-    }
 }

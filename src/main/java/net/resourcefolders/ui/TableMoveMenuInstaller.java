@@ -9,15 +9,17 @@ import javax.swing.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.function.IntFunction;
 
-final class TagMoveMenuInstaller
+final class TableMoveMenuInstaller
 {
-    private TagMoveMenuInstaller()
+    private TableMoveMenuInstaller()
     {
     }
 
     static void install(JTable table,
-            ResourceFolderManager folderManager, Runnable refresh)
+            ResourceFolderManager folderManager, ResourceSection section,
+            IntFunction<String> rowKey, Runnable refresh)
     {
         table.addMouseListener(new MouseAdapter()
         {
@@ -26,7 +28,7 @@ final class TagMoveMenuInstaller
             {
                 if (SwingUtilities.isRightMouseButton(event))
                 {
-                    TagTableEditing.cancelBeforeFolderChange(table);
+                    FolderTableEditing.finishBeforeFolderChange(table, section);
                 }
                 showPopup(event);
             }
@@ -44,20 +46,23 @@ final class TagMoveMenuInstaller
                     return;
                 }
 
-                TagTableEditing.cancelBeforeFolderChange(table);
+                FolderTableEditing.finishBeforeFolderChange(table, section);
 
                 int row = table.rowAtPoint(event.getPoint());
                 if (row < 0)
                 {
                     return;
                 }
-                table.changeSelection(row, 0, false, false);
+                if (!table.isRowSelected(row))
+                {
+                    table.changeSelection(row, 0, false, false);
+                }
 
                 var popup = new JPopupMenu();
                 var moveMenu = new JMenu("Move to folder");
-                addTarget(moveMenu, ResourceSection.TAGS.getDisplayName(),
-                        ResourceFolderData.ROOT_ID, table, folderManager, refresh);
-                var children = folderManager.getChildren(ResourceSection.TAGS.getId(),
+                addTarget(moveMenu, section.getDisplayName(),
+                        ResourceFolderData.ROOT_ID, table, folderManager, section, rowKey, refresh);
+                var children = folderManager.getChildren(section.getId(),
                         ResourceFolderData.ROOT_ID);
                 if (!children.isEmpty())
                 {
@@ -65,7 +70,7 @@ final class TagMoveMenuInstaller
                 }
                 for (var folder : children)
                 {
-                    addFolder(moveMenu, folder, table, folderManager, refresh);
+                    addFolder(moveMenu, folder, table, folderManager, section, rowKey, refresh);
                 }
                 popup.add(moveMenu);
                 popup.show(table, event.getX(), event.getY());
@@ -74,41 +79,43 @@ final class TagMoveMenuInstaller
     }
 
     private static void addFolder(JMenu parent, ResourceFolder folder, JTable table,
-            ResourceFolderManager folderManager, Runnable refresh)
+            ResourceFolderManager folderManager, ResourceSection section,
+            IntFunction<String> rowKey, Runnable refresh)
     {
-        var children = folderManager.getChildren(ResourceSection.TAGS.getId(), folder.getId());
+        var children = folderManager.getChildren(section.getId(), folder.getId());
         if (children.isEmpty())
         {
             addTarget(parent, folder.getName(), folder.getId(), table,
-                    folderManager, refresh);
+                    folderManager, section, rowKey, refresh);
             return;
         }
 
         var submenu = new JMenu(folder.getName());
         addTarget(submenu, "Move here", folder.getId(), table,
-                folderManager, refresh);
+                folderManager, section, rowKey, refresh);
         submenu.addSeparator();
         for (var child : children)
         {
-            addFolder(submenu, child, table, folderManager, refresh);
+            addFolder(submenu, child, table, folderManager, section, rowKey, refresh);
         }
         parent.add(submenu);
     }
 
     private static void addTarget(JMenu menu, String label, String folderId,
-            JTable table, ResourceFolderManager folderManager,
+            JTable table, ResourceFolderManager folderManager, ResourceSection section,
+            IntFunction<String> rowKey,
             Runnable refresh)
     {
         var item = new JMenuItem(label);
         item.addActionListener(_ ->
         {
-            TagTableEditing.cancelBeforeFolderChange(table);
+            FolderTableEditing.finishBeforeFolderChange(table, section);
             var keys = new ArrayList<String>();
             for (int row : table.getSelectedRows())
             {
-                keys.add(TagTableKey.fromViewRow(table, row));
+                keys.add(rowKey.apply(row));
             }
-            folderManager.moveResources(ResourceSection.TAGS.getId(), keys, folderId);
+            folderManager.moveResources(section.getId(), keys, folderId);
             refresh.run();
         });
         menu.add(item);

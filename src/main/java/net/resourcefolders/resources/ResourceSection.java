@@ -44,6 +44,12 @@ public enum ResourceSection
             "tags",
             "Element Tags",
             "WorkspacePanelTags"
+    ),
+
+    VARIABLES(
+            "variables",
+            "Variables",
+            "WorkspacePanelVariables"
     );
 
     private final String id;

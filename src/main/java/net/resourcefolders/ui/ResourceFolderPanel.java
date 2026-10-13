@@ -6,7 +6,9 @@ import net.mcreator.ui.init.UIRES;
 import net.mcreator.ui.variants.modmaker.ModMaker;
 import net.mcreator.workspace.elements.ModElement;
 import net.mcreator.workspace.elements.TagElement;
+import net.mcreator.workspace.elements.VariableElement;
 import net.mcreator.minecraft.TagType;
+import net.mcreator.workspace.references.ReferencesFinder;
 import net.resourcefolders.folders.ResourceFolder;
 import net.resourcefolders.folders.ResourceFolderData;
 import net.resourcefolders.folders.ResourceFolderManager;
@@ -24,6 +26,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -75,6 +78,8 @@ public final class ResourceFolderPanel
     private final List<Runnable>
             resourcesChangedListeners =
             new ArrayList<>();
+
+    private Runnable beforeContentsChange = () -> {};
 
     private String currentFolderId =
             ResourceFolderData.ROOT_ID;
@@ -220,6 +225,11 @@ public final class ResourceFolderPanel
         );
     }
 
+    public void setBeforeContentsChange(Runnable listener)
+    {
+        beforeContentsChange = listener;
+    }
+
     public void installAssetDropTarget(
             Runnable reloadSection)
     {
@@ -279,7 +289,9 @@ public final class ResourceFolderPanel
         );
 
         addFolderButton.setToolTipText(
-                section == ResourceSection.TAGS ? "Create tag folder" : "Create resource folder"
+                section == ResourceSection.TAGS ? "Create tag folder"
+                        : section == ResourceSection.VARIABLES ? "Create variable folder"
+                        : "Create resource folder"
         );
 
         upFolderButton.setToolTipText(
@@ -455,7 +467,9 @@ public final class ResourceFolderPanel
                 JOptionPane.showInputDialog(
                         mcreator,
                         "Folder name:",
-                        section == ResourceSection.TAGS ? "Create Tag Folder" : "Create Resource Folder",
+                        section == ResourceSection.TAGS ? "Create Tag Folder"
+                                : section == ResourceSection.VARIABLES ? "Create Variable Folder"
+                                : "Create Resource Folder",
                         JOptionPane.PLAIN_MESSAGE
                 );
 
@@ -514,7 +528,9 @@ public final class ResourceFolderPanel
                 JOptionPane.showInputDialog(
                         mcreator,
                         "Folder name:",
-                        section == ResourceSection.TAGS ? "Rename Tag Folder" : "Rename Resource Folder",
+                        section == ResourceSection.TAGS ? "Rename Tag Folder"
+                                : section == ResourceSection.VARIABLES ? "Rename Variable Folder"
+                                : "Rename Resource Folder",
                         JOptionPane.PLAIN_MESSAGE,
                         null,
                         null,
@@ -581,6 +597,8 @@ public final class ResourceFolderPanel
             return;
         }
 
+        beforeContentsChange.run();
+
         var folderTreeSize =
                 folderManager.getFolderTreeSize(
                         section.getId(),
@@ -603,6 +621,12 @@ public final class ResourceFolderPanel
         if (section == ResourceSection.TAGS)
         {
             deleteTagFolder(folder, resourceKeys, nestedFolderCount);
+            return;
+        }
+
+        if (section == ResourceSection.VARIABLES)
+        {
+            deleteVariableFolder(folder, resourceKeys, nestedFolderCount);
             return;
         }
 
@@ -698,6 +722,53 @@ public final class ResourceFolderPanel
             workspace.removeTagElement(tag);
         }
 
+        folderManager.deleteFolderTree(section.getId(), folder.getId());
+        refresh();
+        notifyResourcesChanged();
+    }
+
+    private void deleteVariableFolder(ResourceFolder folder, Set<String> variableKeys,
+            int nestedFolderCount)
+    {
+        var workspace = mcreator.getWorkspace();
+        var variables = new ArrayList<VariableElement>();
+        for (var variable : workspace.getVariableElements())
+        {
+            if (variableKeys.contains(ResourceKey.of(variable, workspace)))
+            {
+                variables.add(variable);
+            }
+        }
+
+        var references = new HashSet<ModElement>();
+        mcreator.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+        try
+        {
+            for (var variable : variables)
+            {
+                references.addAll(ReferencesFinder.searchGlobalVariableUsages(
+                        workspace, variable.getName()));
+            }
+        }
+        finally
+        {
+            mcreator.setCursor(Cursor.getDefaultCursor());
+        }
+
+        var message = "Folder &quot;" + StringEscapeUtils.escapeHtml3(folder.getName())
+                + "&quot; contains " + variables.size() + " variable(s) and "
+                + nestedFolderCount + " subfolder(s).<br>Deleting it also deletes those variables "
+                + "from the workspace. This action cannot be undone.";
+        if (!SearchUsagesDialog.showDeleteDialog(mcreator,
+                L10N.t("dialog.search_usages.type.global_variable"), references, message))
+        {
+            return;
+        }
+
+        for (var variable : variables)
+        {
+            workspace.removeVariableElement(variable);
+        }
         folderManager.deleteFolderTree(section.getId(), folder.getId());
         refresh();
         notifyResourcesChanged();
@@ -829,6 +900,8 @@ public final class ResourceFolderPanel
                     "screenshot";
 
             case TAGS -> "tag";
+
+            case VARIABLES -> L10N.t("dialog.search_usages.type.global_variable");
         };
     }
 

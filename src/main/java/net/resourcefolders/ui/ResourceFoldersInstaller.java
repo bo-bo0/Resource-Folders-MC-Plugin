@@ -615,6 +615,9 @@ public final class ResourceFoldersInstaller
 
             case TAGS ->
                     mcreator.getWorkspace().getTagElements().keySet();
+
+            case VARIABLES ->
+                    mcreator.getWorkspace().getVariableElements();
         };
     }
 

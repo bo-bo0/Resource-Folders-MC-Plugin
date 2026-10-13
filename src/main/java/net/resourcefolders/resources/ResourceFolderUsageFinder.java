@@ -160,6 +160,10 @@ public final class ResourceFolderUsageFinder
             case TAGS ->
             {
             }
+
+            case VARIABLES ->
+            {
+            }
         }
 
         return references;

@@ -235,6 +235,9 @@ public final class ResourceFolderContentDeleter
 
             case TAGS ->
                     throw new IllegalArgumentException("Tag deletion must use the workspace tag API");
+
+            case VARIABLES ->
+                    throw new IllegalArgumentException("Variable deletion must use the workspace variable API");
         }
 
         return new DeletionPlan(

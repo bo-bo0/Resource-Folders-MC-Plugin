@@ -33,6 +33,15 @@ configurations
 dependencies
         {
             implementation project(path: ":MCreator")
+            testImplementation platform("org.junit:junit-bom:6.1.2")
+            testImplementation "org.junit.jupiter:junit-jupiter"
+            testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+        }
+
+tasks.named("test", Test)
+        {
+            useJUnitPlatform()
+            systemProperty "log_directory", layout.buildDirectory.dir("test-logs").get().asFile.absolutePath
         }
 
 project(":MCreator").afterEvaluate
